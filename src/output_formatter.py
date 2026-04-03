@@ -155,10 +155,11 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
     ws.title = "Openings"
 
     headers = [
-        "Priority", "What Happened", "Replication Potential",
+        "Priority", "Weighted Score", "What Happened", "Replication Potential",
         "Campaign Status", "Time Sensitivity", "Why This Is an Opening",
         "Category", "Issue Domain",
         "Who", "When", "Where",
+        "FB", "TV", "CR", "TW", "RP", "LGV", "Score Rationale",
         "Source", "Source URL", "Additional Sources",
     ]
 
@@ -193,6 +194,7 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
 
         values = [
             priority_labels.get(o.priority, str(o.priority)),
+            o.weighted_score,
             o.what_happened,
             o.replication_potential,
             o.campaign_status,
@@ -203,6 +205,13 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
             o.who,
             o.when,
             o.where,
+            o.score_force_balance,
+            o.score_target_vulnerability,
+            o.score_constraint_removability,
+            o.score_timing_window,
+            o.score_replication_potential,
+            o.score_long_game_value,
+            o.score_rationale,
             o.source_name,
             o.source_url,
             additional,
@@ -218,23 +227,32 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
         fill = priority_fills.get(o.priority)
         if fill:
             priority_cell.fill = fill
+            ws.cell(row=row_idx, column=2).fill = fill
 
     # Column widths
     col_widths = {
         1: 16,   # Priority
-        2: 50,   # What Happened
-        3: 40,   # Replication Potential
-        4: 30,   # Campaign Status
-        5: 25,   # Time Sensitivity
-        6: 45,   # Why This Is an Opening
-        7: 28,   # Category
-        8: 28,   # Issue Domain
-        9: 25,   # Who
-        10: 16,  # When
-        11: 20,  # Where
-        12: 20,  # Source
-        13: 35,  # Source URL
-        14: 35,  # Additional Sources
+        2: 14,   # Weighted Score
+        3: 50,   # What Happened
+        4: 40,   # Replication Potential
+        5: 30,   # Campaign Status
+        6: 25,   # Time Sensitivity
+        7: 45,   # Why This Is an Opening
+        8: 28,   # Category
+        9: 28,   # Issue Domain
+        10: 25,  # Who
+        11: 16,  # When
+        12: 20,  # Where
+        13: 6,   # FB
+        14: 6,   # TV
+        15: 6,   # CR
+        16: 6,   # TW
+        17: 6,   # RP
+        18: 6,   # LGV
+        19: 40,  # Score Rationale
+        20: 20,  # Source
+        21: 35,  # Source URL
+        22: 35,  # Additional Sources
     }
     for col, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
@@ -322,12 +340,14 @@ def print_summary(openings: list[Opening]) -> None:
             label = {5: "Exceptional", 4: "Strong", 3: "Solid", 2: "Marginal", 1: "Weak"}[p]
             print(f"    Priority {p} ({label}): {count}")
 
-    # Top 10 openings
-    top = sorted(openings, key=lambda o: o.priority, reverse=True)[:10]
+    # Top 10 openings by weighted score
+    top = sorted(openings, key=lambda o: (o.weighted_score, o.priority), reverse=True)[:10]
     print(f"\n  Top 10 Openings:")
     for i, o in enumerate(top, 1):
-        print(f"    {i}. [P{o.priority}] {o.what_happened[:80]}")
+        print(f"    {i}. [P{o.priority} | {o.weighted_score:.2f}] {o.what_happened[:80]}")
         print(f"       Category: {o.category} | Issue: {o.issue_domain}")
-        print(f"       Replication: {o.replication_potential[:60]}")
+        print(f"       Scores: FB={o.score_force_balance} TV={o.score_target_vulnerability} CR={o.score_constraint_removability} TW={o.score_timing_window} RP={o.score_replication_potential} LGV={o.score_long_game_value}")
+        if o.score_rationale:
+            print(f"       Rationale: {o.score_rationale[:80]}")
 
     print(f"\n{'='*60}")

@@ -145,17 +145,79 @@ Respond with a JSON array. For each opening:
     "campaign_status": "Is anyone already systematically working this angle? If so, who?",
     "time_sensitivity": "Is there a window? When does it close? Or is this ongoing?",
     "raw_material_note": "1-2 sentences on why this is an opening and what a campaign might look like",
-    "priority": 4
+    "score_force_balance": 4,
+    "score_target_vulnerability": 3,
+    "score_constraint_removability": 5,
+    "score_timing_window": 4,
+    "score_replication_potential": 4,
+    "score_long_game_value": 3,
+    "weighted_score": 3.95,
+    "priority": 4,
+    "score_rationale": "1-2 sentences on the dominant scoring factor(s)"
   }}
 ]
 ```
 
-Priority scale:
-- 5: Exceptional opening (high replication potential + clear theory of change + timely)
-- 4: Strong opening (most criteria met, actionable)
-- 3: Solid opening (worth considering, some constraints)
-- 2: Marginal opening (interesting but significant barriers)
-- 1: Weak opening (barely meets criteria but worth noting)
+Priority scoring: Rate each opening 1-5 using the rubric below.
+Score each of 6 dimensions, then compute the weighted total.
+
+DIMENSION 1 — Force Balance (weight: 20%)
+What's working for adoption vs. against it?
+5 = Strong push + pull; low habit inertia AND low anxiety; adoption likely without major unlocks
+4 = Forces favor adoption; resistance manageable
+3 = Adoption is conditional — forces are close but a specific precondition (peer validator, visible precedent, coalition anchor) must be met first
+2 = High inertia OR high anxiety is the critical barrier
+1 = Forces strongly favor non-adoption
+
+DIMENSION 2 — Target Vulnerability (weight: 20%)
+Does the named target have a pressure point that actually hurts?
+5 = Clear economic, legal, OR electoral exposure; target cannot easily wait it out
+4 = Real exposure on at least one dimension; some ability to resist
+3 = Partial vulnerability; target has outs
+2 = Target identifiable but exposure is weak or indirect
+1 = No named target, or target is effectively invulnerable (e.g., Congress broadly)
+
+DIMENSION 3 — Constraint Removability / AI Unlock (weight: 15%)
+Can the primary barrier be removed quickly with AI-powered organizing?
+5 = Pure awareness or availability constraint; AI directly solves both; fast unlock (4-8 weeks)
+4 = Primarily availability constraint; buildable with AI in 8-12 weeks
+3 = Mixed constraint; AI helps but behavior change also required
+2 = Primarily behavioral constraint; requires human validator recruitment (3-6 months)
+1 = Deep identity constraint; AI provides minimal unlock
+
+DIMENSION 4 — Timing & Window (weight: 20%)
+How time-sensitive is the opportunity?
+5 = Critical window NOW; leverage disappears within 8-12 weeks
+4 = Strong window now; early action substantially better than later
+3 = Moderate urgency; viable 6-12 months with some degradation
+2 = Low urgency; window open 12+ months
+1 = Evergreen; no particular window
+
+DIMENSION 5 — Replication Potential (weight: 15%)
+Could a win here spread to other cities, companies, or contexts?
+5 = Clear template applicable in 10+ locations immediately; model is portable
+4 = Replicable with modest adaptation; 5-10 locations
+3 = Some replication potential; requires significant local customization
+2 = Mostly one-off; limited generalizability
+1 = Unique to this location or context
+
+DIMENSION 6 — Long Game Value (weight: 10%)
+Does winning this campaign build something durable — either people organized or strategic position shifted?
+5 = Win requires in-person group formation and leadership development; leaves a cell that can run the next campaign; AND/OR shifts a significant pillar of authoritarian support
+4 = Sustained collective action required; meaningful residue even if not in-person; or clear strategic leverage on authoritarian power
+3 = Mixed — some collective action, some individual; partial residue or indirect strategic value
+2 = Primarily individual actions that aggregate; people don't need to know each other; limited strategic shift
+1 = Pure lone wolf action (click, cancel, sign); no organizational residue; tactical win only
+
+Score each dimension 1-5.
+Weighted score = (D1x0.20) + (D2x0.20) + (D3x0.15) + (D4x0.20) + (D5x0.15) + (D6x0.10)
+
+Convert to 1-5 priority:
+4.5-5.0 = Priority 5 (Exceptional — launch-ready)
+3.5-4.4 = Priority 4 (Strong — actionable)
+2.5-3.4 = Priority 3 (Solid — worth developing)
+1.5-2.4 = Priority 2 (Marginal — significant barriers)
+1.0-1.4 = Priority 1 (Weak — note only)
 
 If NO openings are found in this batch, return an empty array: []
 
@@ -278,6 +340,14 @@ def detect_openings(articles: list[Article]) -> list[Opening]:
                         time_sensitivity=item.get("time_sensitivity", ""),
                         raw_material_note=item.get("raw_material_note", ""),
                         priority=item.get("priority", 3),
+                        score_force_balance=item.get("score_force_balance", 0),
+                        score_target_vulnerability=item.get("score_target_vulnerability", 0),
+                        score_constraint_removability=item.get("score_constraint_removability", 0),
+                        score_timing_window=item.get("score_timing_window", 0),
+                        score_replication_potential=item.get("score_replication_potential", 0),
+                        score_long_game_value=item.get("score_long_game_value", 0),
+                        weighted_score=item.get("weighted_score", 0.0),
+                        score_rationale=item.get("score_rationale", ""),
                     )
                     all_openings.append(opening)
                     batch_openings += 1

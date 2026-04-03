@@ -50,6 +50,14 @@ class Opening:
     time_sensitivity: str = ""   # Window? When does it close?
     raw_material_note: str = ""  # Brief note on why this is an opening
     priority: int = 3            # 1-5 score (5 = highest)
+    score_force_balance: int = 0
+    score_target_vulnerability: int = 0
+    score_constraint_removability: int = 0
+    score_timing_window: int = 0
+    score_replication_potential: int = 0
+    score_long_game_value: int = 0
+    weighted_score: float = 0.0
+    score_rationale: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
