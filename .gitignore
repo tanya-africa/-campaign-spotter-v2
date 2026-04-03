@@ -1,0 +1,20 @@
+# Credentials (never commit)
+credentials/
+credentials
+
+# Scan output (large files, regenerated each run)
+data/openings.json
+data/openings_raw.json
+data/openings.md
+data/openings.xlsx
+data/test_openings.xlsx
+data/scan_history.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
