@@ -50,14 +50,20 @@ class Opening:
     time_sensitivity: str = ""   # Window? When does it close?
     raw_material_note: str = ""  # Brief note on why this is an opening
     priority: int = 3            # 1-5 score (5 = highest)
-    score_force_balance: int = 0
-    score_target_vulnerability: int = 0
-    score_constraint_removability: int = 0
-    score_timing_window: int = 0
-    score_replication_potential: int = 0
-    score_long_game_value: int = 0
+    # Stage 1: Gates (0/1/2, all must be 1+ to pass)
+    gate_named_target: int = 0
+    gate_binary_ask: int = 0
+    gate_time_window: int = 0
+    is_watch_list: bool = False   # True if any gate = 0
+    gate_fail_reason: str = ""    # Why the opening failed gating
+    # Stage 2: Scoring dimensions (0/1/2, only meaningful if gates pass)
+    score_beyond_choir: int = 0       # D1: beyond-the-choir constituency (30%)
+    score_pressure_point: int = 0     # D2: actionable pressure point (30%)
+    score_replication: int = 0        # D3: replication potential (20%)
+    score_winnability: int = 0        # D4: winnability in weeks-months (20%)
     weighted_score: float = 0.0
     score_rationale: str = ""
+    campaign_group: str = ""          # Group ID for related openings (same campaign, different angles)
 
     def to_dict(self) -> dict:
         return asdict(self)

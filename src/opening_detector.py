@@ -145,85 +145,108 @@ Respond with a JSON array. For each opening:
     "campaign_status": "Is anyone already systematically working this angle? If so, who?",
     "time_sensitivity": "Is there a window? When does it close? Or is this ongoing?",
     "raw_material_note": "1-2 sentences on why this is an opening and what a campaign might look like",
-    "score_force_balance": 4,
-    "score_target_vulnerability": 3,
-    "score_constraint_removability": 5,
-    "score_timing_window": 4,
-    "score_replication_potential": 4,
-    "score_long_game_value": 3,
-    "weighted_score": 3.95,
-    "priority": 4,
+    "gate_named_target": 1,
+    "gate_binary_ask": 2,
+    "gate_time_window": 2,
+    "gate_fail_reason": "",
+    "score_beyond_choir": 1,
+    "score_pressure_point": 2,
+    "score_replication": 1,
+    "score_winnability": 2,
     "score_rationale": "1-2 sentences on the dominant scoring factor(s)"
   }}
 ]
 ```
 
-Priority scoring: Rate each opening 1-5 using the rubric below.
-Score each of 6 dimensions, then compute the weighted total.
+## Two-Stage Scoring System
 
-DIMENSION 1 — Force Balance (weight: 20%)
-What's working for adoption vs. against it?
-5 = Strong push + pull; low habit inertia AND low anxiety; adoption likely without major unlocks
-4 = Forces favor adoption; resistance manageable
-3 = Adoption is conditional — forces are close but a specific precondition (peer validator, visible precedent, coalition anchor) must be met first
-2 = High inertia OR high anxiety is the critical barrier
-1 = Forces strongly favor non-adoption
+### STAGE 1: Gates (pass/fail)
+Score each gate 0, 1, or 2. An opening that scores 0 on ANY gate is a "Watch List" item — still worth tracking, but not scored or prioritized. Set gate_fail_reason to explain which gate(s) failed and why.
 
-DIMENSION 2 — Target Vulnerability (weight: 20%)
-Does the named target have a pressure point that actually hurts?
-5 = Clear economic, legal, OR electoral exposure; target cannot easily wait it out
-4 = Real exposure on at least one dimension; some ability to resist
-3 = Partial vulnerability; target has outs
-2 = Target identifiable but exposure is weak or indirect
-1 = No named target, or target is effectively invulnerable (e.g., Congress broadly)
+GATE 1 — Named, Reachable Target
+Is there a specific person, company, institution, or body that has the power to deliver a win and can feel pressure?
+2 = Specific named target with clear authority (a sheriff, mayor, CEO, state AG, zoning board, specific company)
+1 = Target identifiable but less direct (a class of actors like "city councils," a state agency)
+0 = No named target, or target is effectively unreachable ("the Trump administration," "Congress," "public opinion")
 
-DIMENSION 3 — Constraint Removability / AI Unlock (weight: 15%)
-Can the primary barrier be removed quickly with AI-powered organizing?
-5 = Pure awareness or availability constraint; AI directly solves both; fast unlock (4-8 weeks)
-4 = Primarily availability constraint; buildable with AI in 8-12 weeks
-3 = Mixed constraint; AI helps but behavior change also required
-2 = Primarily behavioral constraint; requires human validator recruitment (3-6 months)
-1 = Deep identity constraint; AI provides minimal unlock
+GATE 2 — Specific, Binary Ask
+Is there a win condition articulable in one sentence — a decision that can be made, reversed, or blocked?
+2 = Clear binary ask ("revoke the permit," "suspend the contract," "pass the moratorium," "reinstate the employee")
+1 = Ask is identifiable but less crisp ("adopt a version of this policy," "take a public position")
+0 = No specific ask ("raise awareness," "hold accountable," "change the narrative")
 
-DIMENSION 4 — Timing & Window (weight: 20%)
-How time-sensitive is the opportunity?
-5 = Critical window NOW; leverage disappears within 8-12 weeks
-4 = Strong window now; early action substantially better than later
-3 = Moderate urgency; viable 6-12 months with some degradation
-2 = Low urgency; window open 12+ months
-1 = Evergreen; no particular window
+GATE 3 — Time Window Still Open
+Is the triggering event still live? Is there still a window for action?
+2 = Decision pending, news cycle active, target under active scrutiny, deadline approaching
+1 = Window open but not urgent; opportunity persists for months
+0 = Moment has clearly passed — decision made, leverage gone, news cycle moved on
 
-DIMENSION 5 — Replication Potential (weight: 15%)
-Could a win here spread to other cities, companies, or contexts?
-5 = Clear template applicable in 10+ locations immediately; model is portable
-4 = Replicable with modest adaptation; 5-10 locations
-3 = Some replication potential; requires significant local customization
-2 = Mostly one-off; limited generalizability
-1 = Unique to this location or context
+### STAGE 2: Scoring Dimensions
+Score each dimension 0, 1, or 2. Only score if ALL gates passed (all scored 1+). If any gate = 0, leave these as 0.
 
-DIMENSION 6 — Long Game Value (weight: 10%)
-Does winning this campaign build something durable — either people organized or strategic position shifted?
-5 = Win requires in-person group formation and leadership development; leaves a cell that can run the next campaign; AND/OR shifts a significant pillar of authoritarian support
-4 = Sustained collective action required; meaningful residue even if not in-person; or clear strategic leverage on authoritarian power
-3 = Mixed — some collective action, some individual; partial residue or indirect strategic value
-2 = Primarily individual actions that aggregate; people don't need to know each other; limited strategic shift
-1 = Pure lone wolf action (click, cancel, sign); no organizational residue; tactical win only
+DIMENSION 1 — Beyond-the-Choir Constituency (weight: 30%)
+Are there people beyond the progressive base with independent skin in the game?
+2 = Clear non-progressive constituency with self-interest: small business owners, veterans, military families, conservatives in swing districts, non-political constituencies with economic stake, faith communities with institutional leverage
+1 = Constituency extends somewhat beyond the base: moderate Democrats, professional associations, local business community
+0 = Only mobilizes already-activated progressives; no beyond-the-choir angle
 
-Score each dimension 1-5.
-Weighted score = (D1x0.20) + (D2x0.20) + (D3x0.15) + (D4x0.20) + (D5x0.15) + (D6x0.10)
+DIMENSION 2 — Actionable Pressure Point (weight: 30%)
+Is there a specific vulnerability to organized pressure — a lever someone can actually pull?
+2 = Clear pressure mechanism: mayor controls police department, city council controls zoning, consumer pressure on brand, vulnerable Republican in swing district, contract up for renewal, license/permit that can be challenged
+1 = Pressure point exists but indirect: state-level lobbying, litigation as leverage, media pressure on reputation
+0 = No specific pressure mechanism; "Congress should act" with no identified lever
 
-Convert to 1-5 priority:
-4.5-5.0 = Priority 5 (Exceptional — launch-ready)
-3.5-4.4 = Priority 4 (Strong — actionable)
-2.5-3.4 = Priority 3 (Solid — worth developing)
-1.5-2.4 = Priority 2 (Marginal — significant barriers)
-1.0-1.4 = Priority 1 (Weak — note only)
+DIMENSION 3 — Replication Potential (weight: 20%)
+Can the same campaign template run in multiple places?
+2 = Clear template applicable in 10+ locations (model ordinance, corporate campaign hitting multiple franchises, state-level action applicable in many states)
+1 = Replicable with adaptation in 3-10 locations
+0 = One-off situation; unique to this context
+
+DIMENSION 4 — Winnability in Weeks-Months (weight: 20%)
+Can a small team force a decision in a realistic timeframe?
+2 = Decision-maker has unilateral authority, comparable campaigns have won on similar timelines, no legislative supermajority required (local ordinance, corporate policy, executive action)
+1 = Winnable but longer timeline or more complex path (state legislation with sponsors, regulatory process)
+0 = Requires national legislation, years of litigation, or massive infrastructure
+
+The system will compute weighted_score and priority automatically from your gate and dimension scores.
+Do NOT include weighted_score or priority in your response.
 
 If NO openings are found in this batch, return an empty array: []
 
 IMPORTANT: Return ONLY the JSON array, no other text."""
 
     return prompt
+
+
+def compute_score_and_priority(opening: "Opening") -> None:
+    """Compute watch_list status, weighted_score, and priority from gate/dimension scores."""
+    # Stage 1: Check gates
+    if opening.gate_named_target == 0 or opening.gate_binary_ask == 0 or opening.gate_time_window == 0:
+        opening.is_watch_list = True
+        opening.weighted_score = 0.0
+        opening.priority = 0
+        return
+
+    # Stage 2: Weighted score from dimensions (each scored 0-2)
+    opening.weighted_score = (
+        opening.score_beyond_choir * 0.30
+        + opening.score_pressure_point * 0.30
+        + opening.score_replication * 0.20
+        + opening.score_winnability * 0.20
+    )
+
+    # Map weighted score (0.0 - 2.0) to priority (1-5)
+    ws = opening.weighted_score
+    if ws >= 1.8:
+        opening.priority = 5  # Exceptional
+    elif ws >= 1.4:
+        opening.priority = 4  # Strong
+    elif ws >= 1.0:
+        opening.priority = 3  # Solid
+    elif ws >= 0.6:
+        opening.priority = 2  # Marginal
+    else:
+        opening.priority = 1  # Weak
 
 
 def create_dedup_prompt(openings: list[Opening]) -> str:
@@ -243,35 +266,56 @@ Sources: {opening.source_url}
 ---
 """
 
-    prompt = f"""You are helping deduplicate a list of campaign openings. Below are {len(openings)} openings
+    prompt = f"""You are helping deduplicate and group a list of campaign openings. Below are {len(openings)} openings
 that were identified from different news sources.
 
-Your task: Identify openings that describe the SAME underlying event or action
-(not just the same topic or issue domain).
+You have TWO tasks:
+
+### Task 1: Merge exact duplicates
+Identify openings that describe the SAME specific event reported by different sources.
+These should be merged into one entry.
+
+### Task 2: Group related campaign openings
+Identify openings that are different angles on the SAME underlying campaign — different
+events or actors, but they point to the same campaign target, ask, or theory of change.
+Example: "Seattle passed ICE moratoriums" and "ICE warehouse conversions face local permit
+challenges" are different events but the same campaign (local zoning/permitting to block
+ICE detention). These should NOT be merged — keep them separate — but assign them the
+same campaign_group label.
 
 {items_text}
 
 ## Instructions:
-Return a JSON array where each element represents a unique opening.
-- For unique openings: include just the index
-- For duplicates: include all indices that should be merged, and note which one has the best detail
+Return a JSON object with two keys:
 
-Format:
 ```json
-[
-  {{"indices": [1], "keep": 1}},
-  {{"indices": [2, 5, 8], "keep": 5}},
-  {{"indices": [3], "keep": 3}}
-]
+{{
+  "merges": [
+    {{"indices": [1], "keep": 1}},
+    {{"indices": [2, 5, 8], "keep": 5}},
+    {{"indices": [3], "keep": 3}}
+  ],
+  "campaign_groups": [
+    {{"group_label": "Local zoning to block ICE detention", "indices": [3, 7, 12]}},
+    {{"group_label": "State AG legal challenges", "indices": [4, 9]}}
+  ]
+}}
 ```
 
-Rules:
+Rules for merges:
 - Only merge openings about the SAME specific event/action
 - Different actions by different actors on the same topic = KEEP SEPARATE
 - Same action reported by different sources = MERGE
-- Every opening index must appear exactly once
+- Every opening index must appear exactly once in merges
 
-IMPORTANT: Return ONLY the JSON array, no other text."""
+Rules for campaign_groups:
+- Group openings that are part of the same campaign (same target+ask or same theory of change)
+- Use indices that refer to the KEPT opening after merges
+- An opening can belong to at most one campaign group
+- Only create groups with 2+ openings — don't group singletons
+- Use a short, descriptive label for each group
+
+IMPORTANT: Return ONLY the JSON object, no other text."""
 
     return prompt
 
@@ -339,16 +383,17 @@ def detect_openings(articles: list[Article]) -> list[Opening]:
                         campaign_status=item.get("campaign_status", ""),
                         time_sensitivity=item.get("time_sensitivity", ""),
                         raw_material_note=item.get("raw_material_note", ""),
-                        priority=item.get("priority", 3),
-                        score_force_balance=item.get("score_force_balance", 0),
-                        score_target_vulnerability=item.get("score_target_vulnerability", 0),
-                        score_constraint_removability=item.get("score_constraint_removability", 0),
-                        score_timing_window=item.get("score_timing_window", 0),
-                        score_replication_potential=item.get("score_replication_potential", 0),
-                        score_long_game_value=item.get("score_long_game_value", 0),
-                        weighted_score=item.get("weighted_score", 0.0),
+                        gate_named_target=item.get("gate_named_target", 0),
+                        gate_binary_ask=item.get("gate_binary_ask", 0),
+                        gate_time_window=item.get("gate_time_window", 0),
+                        gate_fail_reason=item.get("gate_fail_reason", ""),
+                        score_beyond_choir=item.get("score_beyond_choir", 0),
+                        score_pressure_point=item.get("score_pressure_point", 0),
+                        score_replication=item.get("score_replication", 0),
+                        score_winnability=item.get("score_winnability", 0),
                         score_rationale=item.get("score_rationale", ""),
                     )
+                    compute_score_and_priority(opening)
                     all_openings.append(opening)
                     batch_openings += 1
 
@@ -362,15 +407,21 @@ def detect_openings(articles: list[Article]) -> list[Opening]:
 
     print(f"\n  Total openings before dedup: {len(all_openings)}")
 
-    # Cross-batch deduplication
+    # Cross-batch deduplication and campaign grouping
     if len(all_openings) > 1:
-        print("  Running cross-batch deduplication...")
+        print("  Running cross-batch deduplication and campaign grouping...")
         all_openings = deduplicate_openings(all_openings, client)
 
-    # Sort by priority
-    all_openings.sort(key=lambda o: o.priority, reverse=True)
+    # Sort: scored openings by weighted_score desc, then watch list
+    scored = [o for o in all_openings if not o.is_watch_list]
+    watch_list = [o for o in all_openings if o.is_watch_list]
+    scored.sort(key=lambda o: (o.weighted_score, o.priority), reverse=True)
+    watch_list.sort(key=lambda o: o.what_happened)
 
-    return all_openings
+    print(f"  Scored openings: {len(scored)}")
+    print(f"  Watch list (failed gates): {len(watch_list)}")
+
+    return scored + watch_list
 
 
 def deduplicate_openings(openings: list[Opening], client: anthropic.Anthropic) -> list[Opening]:
@@ -393,9 +444,20 @@ def deduplicate_openings(openings: list[Opening], client: anthropic.Anthropic) -
         )
 
         response_text = response.content[0].text.strip()
-        merge_instructions = _parse_json_response(response_text)
+        parsed = _parse_json_response(response_text)
+
+        # Handle both old format (list) and new format (dict with merges + campaign_groups)
+        if isinstance(parsed, list):
+            merge_instructions = parsed
+            campaign_groups = []
+        else:
+            merge_instructions = parsed.get("merges", [])
+            campaign_groups = parsed.get("campaign_groups", [])
 
         deduplicated = []
+        # Map from original 1-based index to the kept Opening, for campaign group assignment
+        kept_index_map = {}
+
         for instruction in merge_instructions:
             indices = instruction.get("indices", [])
             if not indices:
@@ -427,9 +489,24 @@ def deduplicate_openings(openings: list[Opening], client: anthropic.Anthropic) -
             base.priority = highest_priority
             deduplicated.append(base)
 
+            # Track which original indices map to this kept opening
+            for idx in valid_indices:
+                kept_index_map[idx + 1] = base  # store as 1-based for matching groups
+
+        # Apply campaign group labels
+        for group in campaign_groups:
+            label = group.get("group_label", "")
+            group_indices = group.get("indices", [])
+            for idx in group_indices:
+                if idx in kept_index_map:
+                    kept_index_map[idx].campaign_group = label
+
         removed = len(openings) - len(deduplicated)
+        groups_found = len(campaign_groups)
         if removed > 0:
             print(f"    Dedup: {len(openings)} → {len(deduplicated)} (merged {removed} duplicates)")
+        if groups_found > 0:
+            print(f"    Campaign groups identified: {groups_found}")
 
         return deduplicated
 
@@ -483,6 +560,10 @@ if __name__ == "__main__":
     print("Testing opening detector with sample article...")
     openings = detect_openings(test_articles)
     for o in openings:
-        print(f"\n  [{o.priority}] {o.what_happened}")
-        print(f"      Category: {o.category}")
-        print(f"      Replication: {o.replication_potential}")
+        status = "WATCH LIST" if o.is_watch_list else f"P{o.priority} | {o.weighted_score:.2f}"
+        print(f"\n  [{status}] {o.what_happened}")
+        print(f"      Gates: target={o.gate_named_target} ask={o.gate_binary_ask} window={o.gate_time_window}")
+        if not o.is_watch_list:
+            print(f"      Scores: choir={o.score_beyond_choir} pressure={o.score_pressure_point} repl={o.score_replication} win={o.score_winnability}")
+        if o.campaign_group:
+            print(f"      Campaign group: {o.campaign_group}")

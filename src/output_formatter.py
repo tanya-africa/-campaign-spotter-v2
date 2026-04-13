@@ -68,27 +68,42 @@ def write_markdown(openings: list[Opening], output_path: str = None) -> str:
     if other_categories:
         lines.append(f"- *(Other/uncategorized)*: {other_categories}")
 
-    lines.append("\n### By Priority")
-    priority_counts = Counter(o.priority for o in openings)
+    scored = [o for o in openings if not o.is_watch_list]
+    watch_list = [o for o in openings if o.is_watch_list]
+
+    lines.append(f"\n**Scored openings: {len(scored)} | Watch list: {len(watch_list)}**")
+
+    lines.append("\n### By Priority (scored openings only)")
+    priority_counts = Counter(o.priority for o in scored)
     for p in range(5, 0, -1):
         count = priority_counts.get(p, 0)
         if count > 0:
             label = {5: "Exceptional", 4: "Strong", 3: "Solid", 2: "Marginal", 1: "Weak"}[p]
             lines.append(f"- **Priority {p}** ({label}): {count}")
 
-    # Openings organized by category
+    # Campaign groups summary
+    groups = {}
+    for o in openings:
+        if o.campaign_group:
+            groups.setdefault(o.campaign_group, []).append(o)
+    if groups:
+        lines.append(f"\n### Campaign Groups ({len(groups)})")
+        for label, members in sorted(groups.items()):
+            lines.append(f"- **{label}**: {len(members)} openings")
+
+    # Scored openings organized by category
     lines.append("\n---")
-    lines.append("\n## Openings by Category")
+    lines.append("\n## Scored Openings by Category")
 
     for category in OPENING_CATEGORIES:
-        cat_openings = [o for o in openings if o.category == category]
+        cat_openings = [o for o in scored if o.category == category]
         if not cat_openings:
             continue
 
         lines.append(f"\n### {category} ({len(cat_openings)})")
 
-        # Sort by priority within category
-        cat_openings.sort(key=lambda o: o.priority, reverse=True)
+        # Sort by weighted_score within category
+        cat_openings.sort(key=lambda o: o.weighted_score, reverse=True)
 
         # Group by issue domain within category
         domain_groups = {}
@@ -103,26 +118,31 @@ def write_markdown(openings: list[Opening], output_path: str = None) -> str:
 
             for i, o in enumerate(domain_openings, 1):
                 priority_marker = "!" * o.priority
-                lines.append(f"\n**{i}. [{priority_marker}] {o.what_happened}**")
+                lines.append(f"\n**{i}. [P{o.priority} | {o.weighted_score:.2f}] {o.what_happened}**")
                 lines.append(f"- **Who**: {o.who}")
                 lines.append(f"- **When**: {o.when}")
                 lines.append(f"- **Where**: {o.where}")
+                lines.append(f"- **Gates**: target={o.gate_named_target} | ask={o.gate_binary_ask} | window={o.gate_time_window}")
+                lines.append(f"- **Scores**: beyond-choir={o.score_beyond_choir} | pressure={o.score_pressure_point} | replication={o.score_replication} | winnability={o.score_winnability}")
+                if o.score_rationale:
+                    lines.append(f"- **Score rationale**: {o.score_rationale}")
                 lines.append(f"- **Replication potential**: {o.replication_potential}")
                 lines.append(f"- **Campaign status**: {o.campaign_status}")
                 lines.append(f"- **Time sensitivity**: {o.time_sensitivity}")
                 lines.append(f"- **Why this is an opening**: {o.raw_material_note}")
+                if o.campaign_group:
+                    lines.append(f"- **Campaign group**: {o.campaign_group}")
                 lines.append(f"- **Source**: [{o.source_name}]({o.source_url})")
                 if o.additional_sources:
                     for src in o.additional_sources:
                         lines.append(f"  - Also: [{src}]({src})")
 
-    # Any uncategorized openings
-    uncategorized = [o for o in openings if o.category not in OPENING_CATEGORIES]
+    # Any uncategorized scored openings
+    uncategorized = [o for o in scored if o.category not in OPENING_CATEGORIES]
     if uncategorized:
         lines.append(f"\n### Other/Uncategorized ({len(uncategorized)})")
         for i, o in enumerate(uncategorized, 1):
-            priority_marker = "!" * o.priority
-            lines.append(f"\n**{i}. [{priority_marker}] {o.what_happened}**")
+            lines.append(f"\n**{i}. [P{o.priority} | {o.weighted_score:.2f}] {o.what_happened}**")
             lines.append(f"- **Category**: {o.category}")
             lines.append(f"- **Issue Domain**: {o.issue_domain}")
             lines.append(f"- **Who**: {o.who}")
@@ -131,8 +151,24 @@ def write_markdown(openings: list[Opening], output_path: str = None) -> str:
             lines.append(f"- **Why this is an opening**: {o.raw_material_note}")
             lines.append(f"- **Source**: [{o.source_name}]({o.source_url})")
 
+    # Watch List section
+    if watch_list:
+        lines.append("\n---")
+        lines.append(f"\n## Watch List ({len(watch_list)})")
+        lines.append("\n*These openings failed one or more gates (no named target, no specific ask, or time window closed) but may be worth monitoring.*")
+
+        for i, o in enumerate(watch_list, 1):
+            lines.append(f"\n**{i}. {o.what_happened}**")
+            lines.append(f"- **Who**: {o.who}")
+            lines.append(f"- **Where**: {o.where}")
+            lines.append(f"- **Gates**: target={o.gate_named_target} | ask={o.gate_binary_ask} | window={o.gate_time_window}")
+            if o.gate_fail_reason:
+                lines.append(f"- **Why watch list**: {o.gate_fail_reason}")
+            lines.append(f"- **Why this is an opening**: {o.raw_material_note}")
+            lines.append(f"- **Source**: [{o.source_name}]({o.source_url})")
+
     lines.append("\n---")
-    lines.append(f"\n*End of scan. {len(openings)} openings identified.*")
+    lines.append(f"\n*End of scan. {len(scored)} scored openings, {len(watch_list)} watch list.*")
 
     with open(output_path, 'w') as f:
         f.write("\n".join(lines))
@@ -155,11 +191,15 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
     ws.title = "Openings"
 
     headers = [
-        "Priority", "Weighted Score", "What Happened", "Replication Potential",
-        "Campaign Status", "Time Sensitivity", "Why This Is an Opening",
+        "Status", "Priority", "Weighted Score", "What Happened",
+        "Campaign Group",
+        "G: Target", "G: Ask", "G: Window", "Gate Fail Reason",
+        "D: Beyond Choir", "D: Pressure Point", "D: Replication", "D: Winnability",
+        "Score Rationale",
+        "Replication Potential", "Campaign Status", "Time Sensitivity",
+        "Why This Is an Opening",
         "Category", "Issue Domain",
         "Who", "When", "Where",
-        "FB", "TV", "CR", "TW", "RP", "LGV", "Score Rationale",
         "Source", "Source URL", "Additional Sources",
     ]
 
@@ -185,17 +225,30 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
         2: PatternFill("solid", fgColor="FCE4D6"),  # light orange
         1: PatternFill("solid", fgColor="F2F2F2"),  # light gray
     }
+    watch_list_fill = PatternFill("solid", fgColor="E0E0E0")  # gray
     priority_labels = {5: "5 - Exceptional", 4: "4 - Strong", 3: "3 - Solid", 2: "2 - Marginal", 1: "1 - Weak"}
 
     wrap_alignment = Alignment(vertical="top", wrap_text=True)
 
     for row_idx, o in enumerate(openings, 2):
         additional = "; ".join(o.additional_sources) if o.additional_sources else ""
+        status = "Watch List" if o.is_watch_list else "Scored"
 
         values = [
-            priority_labels.get(o.priority, str(o.priority)),
-            o.weighted_score,
+            status,
+            priority_labels.get(o.priority, str(o.priority)) if not o.is_watch_list else "—",
+            o.weighted_score if not o.is_watch_list else "",
             o.what_happened,
+            o.campaign_group,
+            o.gate_named_target,
+            o.gate_binary_ask,
+            o.gate_time_window,
+            o.gate_fail_reason,
+            o.score_beyond_choir if not o.is_watch_list else "",
+            o.score_pressure_point if not o.is_watch_list else "",
+            o.score_replication if not o.is_watch_list else "",
+            o.score_winnability if not o.is_watch_list else "",
+            o.score_rationale,
             o.replication_potential,
             o.campaign_status,
             o.time_sensitivity,
@@ -205,13 +258,6 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
             o.who,
             o.when,
             o.where,
-            o.score_force_balance,
-            o.score_target_vulnerability,
-            o.score_constraint_removability,
-            o.score_timing_window,
-            o.score_replication_potential,
-            o.score_long_game_value,
-            o.score_rationale,
             o.source_name,
             o.source_url,
             additional,
@@ -222,37 +268,45 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
             cell.alignment = wrap_alignment
             cell.border = thin_border
 
-        # Color the priority cell
-        priority_cell = ws.cell(row=row_idx, column=1)
-        fill = priority_fills.get(o.priority)
-        if fill:
-            priority_cell.fill = fill
-            ws.cell(row=row_idx, column=2).fill = fill
+        # Color rows by status/priority
+        if o.is_watch_list:
+            for col in range(1, len(headers) + 1):
+                ws.cell(row=row_idx, column=col).fill = watch_list_fill
+        else:
+            fill = priority_fills.get(o.priority)
+            if fill:
+                ws.cell(row=row_idx, column=1).fill = fill
+                ws.cell(row=row_idx, column=2).fill = fill
+                ws.cell(row=row_idx, column=3).fill = fill
 
     # Column widths
     col_widths = {
-        1: 16,   # Priority
-        2: 14,   # Weighted Score
-        3: 50,   # What Happened
-        4: 40,   # Replication Potential
-        5: 30,   # Campaign Status
-        6: 25,   # Time Sensitivity
-        7: 45,   # Why This Is an Opening
-        8: 28,   # Category
-        9: 28,   # Issue Domain
-        10: 25,  # Who
-        11: 16,  # When
-        12: 20,  # Where
-        13: 6,   # FB
-        14: 6,   # TV
-        15: 6,   # CR
-        16: 6,   # TW
-        17: 6,   # RP
-        18: 6,   # LGV
-        19: 40,  # Score Rationale
-        20: 20,  # Source
-        21: 35,  # Source URL
-        22: 35,  # Additional Sources
+        1: 12,   # Status
+        2: 16,   # Priority
+        3: 14,   # Weighted Score
+        4: 50,   # What Happened
+        5: 30,   # Campaign Group
+        6: 10,   # G: Target
+        7: 10,   # G: Ask
+        8: 10,   # G: Window
+        9: 30,   # Gate Fail Reason
+        10: 14,  # D: Beyond Choir
+        11: 14,  # D: Pressure Point
+        12: 14,  # D: Replication
+        13: 14,  # D: Winnability
+        14: 40,  # Score Rationale
+        15: 40,  # Replication Potential
+        16: 30,  # Campaign Status
+        17: 25,  # Time Sensitivity
+        18: 45,  # Why This Is an Opening
+        19: 28,  # Category
+        20: 28,  # Issue Domain
+        21: 25,  # Who
+        22: 16,  # When
+        23: 20,  # Where
+        24: 20,  # Source
+        25: 35,  # Source URL
+        26: 35,  # Additional Sources
     }
     for col, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
@@ -297,11 +351,23 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
             summary.cell(row=row, column=2, value=count)
             row += 1
 
-    # By Priority
+    # By Status
     row += 1
-    summary.cell(row=row, column=1, value="By Priority").font = summary_subheader_font
+    scored = [o for o in openings if not o.is_watch_list]
+    watch_list = [o for o in openings if o.is_watch_list]
+    summary.cell(row=row, column=1, value="By Status").font = summary_subheader_font
     row += 1
-    priority_counts = Counter(o.priority for o in openings)
+    summary.cell(row=row, column=1, value="Scored")
+    summary.cell(row=row, column=2, value=len(scored))
+    row += 1
+    summary.cell(row=row, column=1, value="Watch List")
+    summary.cell(row=row, column=2, value=len(watch_list))
+
+    # By Priority (scored only)
+    row += 2
+    summary.cell(row=row, column=1, value="By Priority (scored)").font = summary_subheader_font
+    row += 1
+    priority_counts = Counter(o.priority for o in scored)
     for p in range(5, 0, -1):
         count = priority_counts.get(p, 0)
         if count > 0:
@@ -319,8 +385,12 @@ def write_xlsx(openings: list[Opening], output_path: str = None) -> str:
 
 def print_summary(openings: list[Opening]) -> None:
     """Print a summary of detected openings to stdout."""
+    scored = [o for o in openings if not o.is_watch_list]
+    watch_list = [o for o in openings if o.is_watch_list]
+
     print(f"\n{'='*60}")
     print(f"  SCAN COMPLETE: {len(openings)} campaign openings identified")
+    print(f"  Scored: {len(scored)} | Watch list: {len(watch_list)}")
     print(f"{'='*60}")
 
     # By category
@@ -331,23 +401,36 @@ def print_summary(openings: list[Opening]) -> None:
         if count > 0:
             print(f"    {cat}: {count}")
 
-    # By priority
-    print("\n  By Priority:")
-    priority_counts = Counter(o.priority for o in openings)
+    # By priority (scored only)
+    print("\n  By Priority (scored openings):")
+    priority_counts = Counter(o.priority for o in scored)
     for p in range(5, 0, -1):
         count = priority_counts.get(p, 0)
         if count > 0:
             label = {5: "Exceptional", 4: "Strong", 3: "Solid", 2: "Marginal", 1: "Weak"}[p]
             print(f"    Priority {p} ({label}): {count}")
 
-    # Top 10 openings by weighted score
-    top = sorted(openings, key=lambda o: (o.weighted_score, o.priority), reverse=True)[:10]
+    # Top 10 scored openings by weighted score
+    top = sorted(scored, key=lambda o: (o.weighted_score, o.priority), reverse=True)[:10]
     print(f"\n  Top 10 Openings:")
     for i, o in enumerate(top, 1):
         print(f"    {i}. [P{o.priority} | {o.weighted_score:.2f}] {o.what_happened[:80]}")
-        print(f"       Category: {o.category} | Issue: {o.issue_domain}")
-        print(f"       Scores: FB={o.score_force_balance} TV={o.score_target_vulnerability} CR={o.score_constraint_removability} TW={o.score_timing_window} RP={o.score_replication_potential} LGV={o.score_long_game_value}")
+        print(f"       Gates: target={o.gate_named_target} ask={o.gate_binary_ask} window={o.gate_time_window}")
+        print(f"       Scores: choir={o.score_beyond_choir} pressure={o.score_pressure_point} repl={o.score_replication} win={o.score_winnability}")
+        if o.campaign_group:
+            print(f"       Group: {o.campaign_group}")
         if o.score_rationale:
             print(f"       Rationale: {o.score_rationale[:80]}")
+
+    # Watch list summary
+    if watch_list:
+        print(f"\n  Watch List ({len(watch_list)} openings failed gates):")
+        for i, o in enumerate(watch_list[:5], 1):
+            print(f"    {i}. {o.what_happened[:70]}")
+            print(f"       Gates: target={o.gate_named_target} ask={o.gate_binary_ask} window={o.gate_time_window}")
+            if o.gate_fail_reason:
+                print(f"       Reason: {o.gate_fail_reason[:70]}")
+        if len(watch_list) > 5:
+            print(f"    ... and {len(watch_list) - 5} more")
 
     print(f"\n{'='*60}")
