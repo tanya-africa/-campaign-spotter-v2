@@ -195,10 +195,10 @@ DIMENSION 2 — Actionable Pressure Point (weight: 25%)
 4 = Target is already showing signs of vulnerability — cracking, wavering, making defensive moves
 
 DIMENSION 3 — Anti-Authoritarian Impact (weight: 25%)
-0 = No clear connection to authoritarian power or democratic erosion
-1 = Tangential connection requiring several inferential steps
-2 = Directly implicates authoritarian power or democratic erosion
-3 = Directly anti-authoritarian AND targets an institutional pillar (military, business, religious, law enforcement, judiciary)
+0 = No connection to government authoritarian power. Generic corporate accountability, environmental, housing, labor, consumer issues score 0 unless there is a DIRECT link to government authoritarianism.
+1 = Tangential connection — corporate actor has not explicitly supported authoritarianism but enables it indirectly (e.g., general government contractor)
+2 = Direct link to government authoritarian power: target IS a government actor exercising authoritarian power (ICE, DOJ political prosecutions, voter suppression), OR target is a corporate actor who has EXPLICITLY supported authoritarian politics (e.g., Musk) or is ACTIVELY building tools of government authoritarian control (e.g., Palantir's ICE databases, surveillance tech for government use)
+3 = Directly anti-authoritarian AND targets an institutional pillar (military, business, religious, law enforcement, judiciary) — the campaign's theory of change erodes a specific support structure
 4 = Structurally weakens authoritarian support by driving a wedge into a major institutional pillar at a moment of visible fracture
 
 DIMENSION 4 — Replication Potential (weight: 12.5%)
@@ -225,94 +225,7 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
     return prompt
 
 
-# =============================================================================
-# Self-Critique Prompt
-# =============================================================================
-
-def create_critique_prompt(ideas: list[CampaignIdea]) -> str:
-    """Create prompt for the self-critique pass on top-scoring ideas."""
-
-    ideas_text = ""
-    for i, idea in enumerate(ideas):
-        ideas_text += f"""
----
-IDEA {i+1}: {idea.headline}
-News hook: {idea.news_hook}
-Target: {idea.target}
-Ask: {idea.ask}
-Constituency: {idea.constituency}
-Theory of leverage: {idea.theory_of_leverage}
-Where: {idea.where}
-Time sensitivity: {idea.time_sensitivity}
-Gates: target={idea.gate_named_target} ask={idea.gate_binary_ask} window={idea.gate_time_window}
-Scores: beyond_choir={idea.score_beyond_choir} pressure={idea.score_pressure_point} anti_auth={idea.score_anti_authoritarian} replication={idea.score_replication} winnability={idea.score_winnability}
-Weighted score: {idea.weighted_score:.2f}
-Rationale: {idea.score_rationale}
----
-"""
-
-    prompt = f"""You are a skeptical campaign strategist reviewing scored campaign ideas.
-Your job is to stress-test each idea and adjust scores where they don't hold up.
-
-## Ideas to Review:
-{ideas_text}
-
-## For each idea, ask these questions:
-
-1. **Does the target actually care?** Don't score "actionable pressure point" based on
-   whether a target theoretically could be pressured. Ask whether THIS constituency has
-   leverage over THIS target through THIS mechanism. If you can't explain in one sentence
-   why the target would cave, downgrade the score.
-
-2. **Is this one campaign or three?** If the target, constituency, and ask don't connect
-   in a single chain (constituency X does action Y, target Z does W), it's been mashed
-   together. Flag it.
-
-3. **Is the constituency real or aspirational?** "Veterans could be organized" is
-   aspirational. "Veterans are already speaking out" is real. Score based on what's
-   actually happening, not what you wish were happening.
-
-4. **Do the gate scores hold up?** Is the "named target" actually specific enough?
-   Is the "binary ask" truly binary? Is the time window really still open?
-
-5. **Are the dimension scores honest?** Would a smart, skeptical campaigner actually
-   pursue this? If beyond-the-choir is scored 3+, is that constituency really already
-   engaging, or is it theoretical?
-
-6. **Are any of these duplicates?** Multiple ideas that point at the same underlying
-   campaign opportunity should be grouped. Identify groups and note which idea in each
-   group is strongest.
-
-## Response Format
-
-Return a JSON array with one entry per idea:
-```json
-[
-  {{
-    "idea_index": 1,
-    "gate_named_target": 2,
-    "gate_binary_ask": 2,
-    "gate_time_window": 1,
-    "score_beyond_choir": 2,
-    "score_pressure_point": 3,
-    "score_anti_authoritarian": 3,
-    "score_replication": 2,
-    "score_winnability": 3,
-    "critique_notes": "Pressure point upgraded: target already lost a similar fight in another state, showing vulnerability. Beyond-choir downgraded: veteran constituency is aspirational, not yet engaged.",
-    "campaign_group": "ICE detention local resistance"
-  }}
-]
-```
-
-Rules:
-- Return adjusted scores for EVERY idea, even if unchanged
-- critique_notes should explain what you changed and why (or "Scores hold up" if no changes)
-- campaign_group: assign a short label if multiple ideas are the same campaign from different angles. Leave empty for unique ideas.
-- Be genuinely critical. The first pass tends to be generous. Your job is to be honest.
-
-IMPORTANT: Return ONLY the JSON array, no other text."""
-
-    return prompt
+    # Old self-critique prompt removed — replaced by critique_agent.py
 
 
 # =============================================================================
@@ -450,86 +363,27 @@ def generate_ideas(articles: list[Article]) -> list[CampaignIdea]:
     print(f"\n  Pass 1 complete: {len(scored)} scored ideas, {len(watch)} watch list")
 
     # =========================================================================
-    # Pass 2: Self-critique on scored ideas
+    # Pass 2: Critique agent (separate adversarial reviewer)
     # =========================================================================
     if scored:
-        print(f"\n  Running self-critique on {len(scored)} scored ideas...")
-        scored = self_critique(scored, client)
+        from critique_agent import run_critique
+        print(f"\n  Running critique agent on {len(scored)} scored ideas...")
+        all_ideas = run_critique(scored + watch)
+    else:
+        all_ideas = scored + watch
 
     # =========================================================================
     # Sort and return
     # =========================================================================
+    scored = [i for i in all_ideas if not i.is_watch_list]
+    watch = [i for i in all_ideas if i.is_watch_list]
     scored.sort(key=lambda i: (i.weighted_score, i.priority), reverse=True)
     watch.sort(key=lambda i: i.headline)
 
     return scored + watch
 
 
-def self_critique(ideas: list[CampaignIdea], client: anthropic.Anthropic) -> list[CampaignIdea]:
-    """Run the self-critique pass: review scores, adjust, and group."""
-
-    # Process in chunks if needed (stay within token limits)
-    chunk_size = 20
-    all_critiqued = []
-
-    for chunk_start in range(0, len(ideas), chunk_size):
-        chunk = ideas[chunk_start:chunk_start + chunk_size]
-        print(f"    Critiquing {len(chunk)} ideas...")
-
-        # Save pre-critique scores
-        for idea in chunk:
-            idea.pre_critique_score = idea.weighted_score
-
-        prompt = create_critique_prompt(chunk)
-
-        try:
-            response = client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=4000,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            response_text = response.content[0].text.strip()
-            critiques = _parse_json_response(response_text)
-
-            adjustments = 0
-            for critique in critiques:
-                idx = critique.get("idea_index", 0) - 1
-                if 0 <= idx < len(chunk):
-                    idea = chunk[idx]
-
-                    # Apply adjusted scores
-                    idea.gate_named_target = critique.get("gate_named_target", idea.gate_named_target)
-                    idea.gate_binary_ask = critique.get("gate_binary_ask", idea.gate_binary_ask)
-                    idea.gate_time_window = critique.get("gate_time_window", idea.gate_time_window)
-                    idea.score_beyond_choir = critique.get("score_beyond_choir", idea.score_beyond_choir)
-                    idea.score_pressure_point = critique.get("score_pressure_point", idea.score_pressure_point)
-                    idea.score_anti_authoritarian = critique.get("score_anti_authoritarian", idea.score_anti_authoritarian)
-                    idea.score_replication = critique.get("score_replication", idea.score_replication)
-                    idea.score_winnability = critique.get("score_winnability", idea.score_winnability)
-                    idea.critique_notes = critique.get("critique_notes", "")
-                    idea.campaign_group = critique.get("campaign_group", idea.campaign_group)
-
-                    # Recompute
-                    compute_score_and_priority(idea)
-
-                    if idea.weighted_score != idea.pre_critique_score:
-                        adjustments += 1
-
-            print(f"    Adjusted {adjustments}/{len(chunk)} ideas")
-
-        except (json.JSONDecodeError, anthropic.APIError) as e:
-            print(f"    Warning: Self-critique failed ({e}), keeping original scores")
-
-        all_critiqued.extend(chunk)
-
-    # Some ideas may have been demoted to watch list by critique
-    still_scored = [i for i in all_critiqued if not i.is_watch_list]
-    demoted = [i for i in all_critiqued if i.is_watch_list]
-    if demoted:
-        print(f"    Critique demoted {len(demoted)} ideas to watch list")
-
-    return all_critiqued
+    # Old self_critique function removed — replaced by critique_agent.py
 
 
 # =============================================================================
