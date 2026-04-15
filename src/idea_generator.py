@@ -178,9 +178,12 @@ GATE 2 — Specific, Binary Ask
     multiple steps from multiple actors with no single decision point.
 
 GATE 3 — Time Window Still Open
-2 = Decision pending, news cycle active, target under active scrutiny, deadline approaching
-1 = Window open but not urgent; opportunity persists for months
-0 = Moment has clearly passed — decision made, leverage gone, news cycle moved on
+This is a simple open/closed check. Don't penalize longer windows — a campaign with
+6 months of runway is more viable than one with 2 weeks, not less.
+1 = Window is open. The decision hasn't been made, the leverage still exists, and there's
+    enough time to realistically organize a campaign (at least 2-3 weeks).
+0 = Window is essentially closed. Decision already made, leverage gone, or the moment
+    will have passed before anyone could realistically act on it.
 
 ### STAGE 2: Scoring Dimensions (0-4 each)
 Only score if ALL gates passed (all scored 1+). If any gate = 0, leave these as 0.

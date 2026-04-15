@@ -111,7 +111,9 @@ and adjust where the first pass was too generous. Default assumption: scores are
 1. **Gates** — Do they actually hold up? Is the target truly named and reachable?
    Is the ask truly binary? Is the window truly open? Be strict: if the "target" is
    an ally being encouraged, or the "ask" has multiple steps with no single decision
-   point, fail the gate.
+   point, fail the gate. For G3 (time window): this is open/closed only. A window
+   that's open for months is GOOD — more time to organize. Only fail if the moment
+   has genuinely passed or will pass before anyone could realistically act.
 
 2. **Anti-authoritarian impact (D3)** — Apply your mandate. Corporate power alone = 0.
    Only score 2+ if there's a direct, specific link to government authoritarian power
