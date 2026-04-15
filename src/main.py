@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Vibe-Campaigning Opening Scanner
+Vibe-Campaigning Campaign Idea Generator v3
 
-Scans multiple sources for campaign openings using Framework #1 criteria.
-Produces a structured list of openings for collaborative review.
+Searches news broadly (RSS feeds + dynamic AI-generated queries),
+generates campaign ideas with target/ask/constituency/leverage,
+scores them against a two-stage rubric, and self-critiques.
 
 Usage:
-    python main.py                          # Full 30-day scan, all sources
+    python main.py                          # Full scan, all sources
     python main.py --lookback-days 7        # Last 7 days only
     python main.py --sources gnews,reddit   # Only specific sources
-    python main.py --max-openings 100       # Cap at 100 openings
-    python main.py --preview                # Skip Gmail, use RSS + social + Google News
+    python main.py --max-ideas 50           # Cap at 50 ideas
+    python main.py --preview                # Skip Gmail, use RSS + social + dynamic queries
+    python main.py --skip-dynamic           # Skip dynamic query generation (RSS + hardcoded only)
 """
 
 import argparse
@@ -23,13 +25,13 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import DEFAULT_LOOKBACK_DAYS, MAX_OPENINGS, DATA_DIR
+from config import DEFAULT_LOOKBACK_DAYS, MAX_OPENINGS, DATA_DIR, GOOGLE_NEWS_QUERIES
 from models import Article
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Scan for campaign openings across multiple sources"
+        description="Generate campaign ideas from news across multiple sources"
     )
     parser.add_argument(
         '--lookback-days', type=int, default=DEFAULT_LOOKBACK_DAYS,
@@ -37,11 +39,11 @@ def parse_args():
     )
     parser.add_argument(
         '--sources', type=str, default=None,
-        help="Comma-separated source types: rss,regional,gnews,gmail,reddit,bluesky (default: all)"
+        help="Comma-separated source types: rss,regional,gnews,gmail,reddit,bluesky,dynamic (default: all)"
     )
     parser.add_argument(
-        '--max-openings', type=int, default=MAX_OPENINGS,
-        help=f"Maximum number of openings to output (default: {MAX_OPENINGS})"
+        '--max-ideas', type=int, default=MAX_OPENINGS,
+        help=f"Maximum number of ideas to output (default: {MAX_OPENINGS})"
     )
     parser.add_argument(
         '--output-dir', type=str, default=None,
@@ -49,7 +51,11 @@ def parse_args():
     )
     parser.add_argument(
         '--preview', action='store_true',
-        help="Preview mode: skip Gmail, use only RSS + social + Google News"
+        help="Preview mode: skip Gmail, use RSS + social + dynamic queries"
+    )
+    parser.add_argument(
+        '--skip-dynamic', action='store_true',
+        help="Skip dynamic query generation (use only RSS feeds + hardcoded queries)"
     )
     return parser.parse_args()
 
@@ -61,10 +67,7 @@ def deduplicate_articles(articles: list[Article]) -> list[Article]:
     unique = []
 
     for article in articles:
-        # Normalize URL
         url_key = article.url.lower().rstrip('/')
-
-        # Normalize title (alphanumeric only)
         title_key = re.sub(r'[^a-z0-9]', '', article.title.lower())
 
         if url_key in seen_urls:
@@ -90,19 +93,22 @@ def run_scan():
     if args.sources:
         sources = [s.strip() for s in args.sources.split(',')]
     elif args.preview:
-        sources = ['rss', 'regional', 'gnews', 'reddit', 'bluesky']
+        sources = ['rss', 'regional', 'gnews', 'dynamic', 'reddit', 'bluesky']
     else:
-        sources = ['rss', 'regional', 'gnews', 'gmail', 'reddit', 'bluesky']
+        sources = ['rss', 'regional', 'gnews', 'dynamic', 'gmail', 'reddit', 'bluesky']
+
+    if args.skip_dynamic and 'dynamic' in sources:
+        sources.remove('dynamic')
 
     # Output directory
     output_dir = Path(args.output_dir) if args.output_dir else DATA_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"{'='*60}")
-    print(f"  VIBE-CAMPAIGNING: Campaign Opening Scanner")
+    print(f"  VIBE-CAMPAIGNING: Campaign Idea Generator v3")
     print(f"  Lookback: {lookback_days} days")
     print(f"  Sources: {', '.join(sources)}")
-    print(f"  Max openings: {args.max_openings}")
+    print(f"  Max ideas: {args.max_ideas}")
     print(f"{'='*60}\n")
 
     # =========================================================================
@@ -110,13 +116,35 @@ def run_scan():
     # =========================================================================
     all_articles = []
 
-    # RSS-based sources (national, regional, Google News)
+    # RSS-based sources (national, regional, hardcoded Google News queries)
     rss_sources = [s for s in sources if s in ('rss', 'regional', 'gnews')]
     if rss_sources:
         from rss_fetcher import fetch_all_feeds
         rss_articles = fetch_all_feeds(lookback_days=lookback_days, sources=rss_sources)
         all_articles.extend(rss_articles)
         print(f"\n  RSS-based sources: {len(rss_articles)} articles")
+
+    # Dynamic AI-generated queries
+    if 'dynamic' in sources:
+        print(f"\n[Step 1b] Generating dynamic search queries via AI...")
+        from query_generator import select_categories, generate_queries
+        from rss_fetcher import fetch_google_news_queries
+
+        categories = select_categories(num_rotating=3)
+        dynamic_queries = generate_queries(categories)
+
+        # Flatten to a list of query strings
+        query_list = []
+        for cat_queries in dynamic_queries.values():
+            query_list.extend(cat_queries)
+
+        if query_list:
+            print(f"  Fetching articles for {len(query_list)} dynamic queries...")
+            dynamic_articles = fetch_google_news_queries(
+                query_list, lookback_days=lookback_days
+            )
+            all_articles.extend(dynamic_articles)
+            print(f"  Dynamic queries: {len(dynamic_articles)} articles")
 
     # Gmail newsletters
     if 'gmail' in sources:
@@ -160,31 +188,52 @@ def run_scan():
     print(f"  After dedup: {len(unique_articles)} unique articles")
 
     # =========================================================================
-    # Step 3: Detect openings via AI
+    # Step 3: Generate campaign ideas (includes self-critique)
     # =========================================================================
-    print(f"\n[Step 3] Detecting campaign openings via AI...")
+    print(f"\n[Step 3] Generating campaign ideas via AI...")
     print(f"  Processing {len(unique_articles)} articles in batches...")
 
-    from opening_detector import detect_openings
+    from idea_generator import generate_ideas, deduplicate_ideas
     from output_formatter import write_json as _write_json_raw
 
-    openings = detect_openings(unique_articles)
+    ideas = generate_ideas(unique_articles)
 
-    print(f"\n  Openings detected: {len(openings)}")
+    print(f"\n  Ideas generated: {len(ideas)}")
 
-    # Save raw openings before dedup (for resume capability)
-    raw_path = str(output_dir / "openings_raw.json")
-    _write_json_raw(openings, raw_path)
-    print(f"  Raw openings saved to: {raw_path}")
+    # Save raw ideas before dedup
+    raw_path = str(output_dir / "ideas_raw.json")
+    _write_json_raw(ideas, raw_path)
+    print(f"  Raw ideas saved to: {raw_path}")
+
+    # =========================================================================
+    # Step 3b: Cross-batch deduplication
+    # =========================================================================
+    scored = [i for i in ideas if not i.is_watch_list]
+    watch = [i for i in ideas if i.is_watch_list]
+
+    if len(scored) > 1:
+        print(f"\n[Step 3b] Deduplicating {len(scored)} scored ideas...")
+        import anthropic
+        from config import ANTHROPIC_API_KEY
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        scored = deduplicate_ideas(scored, client)
+
+    ideas = scored + watch
 
     # =========================================================================
     # Step 4: Cap and sort
     # =========================================================================
-    if len(openings) > args.max_openings:
-        print(f"\n[Step 4] Capping to {args.max_openings} openings (from {len(openings)})...")
-        openings = sorted(openings, key=lambda o: o.priority, reverse=True)[:args.max_openings]
-    else:
-        openings = sorted(openings, key=lambda o: o.priority, reverse=True)
+    scored = [i for i in ideas if not i.is_watch_list]
+    watch = [i for i in ideas if i.is_watch_list]
+
+    scored.sort(key=lambda i: (i.weighted_score, i.priority), reverse=True)
+    watch.sort(key=lambda i: i.headline)
+
+    if len(scored) > args.max_ideas:
+        print(f"\n[Step 4] Capping scored ideas to {args.max_ideas} (from {len(scored)})...")
+        scored = scored[:args.max_ideas]
+
+    ideas = scored + watch
 
     # =========================================================================
     # Step 5: Write output
@@ -193,17 +242,16 @@ def run_scan():
 
     from output_formatter import write_json, write_markdown, write_xlsx, print_summary
 
-    json_path = write_json(openings, str(output_dir / "openings.json"))
+    json_path = write_json(ideas, str(output_dir / "ideas.json"))
     print(f"  JSON: {json_path}")
 
-    md_path = write_markdown(openings, str(output_dir / "openings.md"))
+    md_path = write_markdown(ideas, str(output_dir / "ideas.md"))
     print(f"  Markdown: {md_path}")
 
-    xlsx_path = write_xlsx(openings, str(output_dir / "openings.xlsx"))
+    xlsx_path = write_xlsx(ideas, str(output_dir / "ideas.xlsx"))
     print(f"  Excel: {xlsx_path}")
 
-    # Print summary
-    print_summary(openings)
+    print_summary(ideas)
 
     elapsed = time.time() - start_time
     print(f"\n  Completed in {elapsed:.0f} seconds ({elapsed/60:.1f} minutes)")

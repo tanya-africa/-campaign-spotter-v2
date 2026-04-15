@@ -230,6 +230,74 @@ def fetch_google_news(lookback_days: int = DEFAULT_LOOKBACK_DAYS) -> list[Articl
     return sorted(all_articles, key=lambda a: a.published, reverse=True)
 
 
+def fetch_google_news_queries(queries: list[str], lookback_days: int = DEFAULT_LOOKBACK_DAYS) -> list[Article]:
+    """Fetch Google News RSS for an arbitrary list of query strings (e.g., from dynamic generation)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    all_articles = []
+    seen_urls = set()
+
+    for i, query in enumerate(queries):
+        encoded_query = quote_plus(query)
+        url = GOOGLE_NEWS_RSS_TEMPLATE.format(query=encoded_query)
+
+        print(f"    [{i+1}/{len(queries)}] {query[:60]}...")
+
+        try:
+            response = requests.get(
+                url,
+                timeout=30,
+                headers={'User-Agent': 'VibeCampaigning/1.0 (campaign idea generator)'}
+            )
+            response.raise_for_status()
+
+            feed = feedparser.parse(response.content)
+            count = 0
+
+            for entry in feed.entries:
+                pub_date = parse_date(entry)
+                if not pub_date:
+                    pub_date = datetime.now(timezone.utc)
+                elif pub_date < cutoff:
+                    continue
+
+                entry_url = entry.get('link', '')
+                if not entry_url or entry_url in seen_urls:
+                    continue
+
+                seen_urls.add(entry_url)
+
+                content = entry.get('summary', entry.get('title', ''))
+                h = html2text.HTML2Text()
+                h.ignore_links = True
+                h.ignore_images = True
+                h.body_width = 0
+                content = h.handle(content).strip() if '<' in content else content
+
+                article = Article(
+                    title=entry.get('title', 'No title'),
+                    url=entry_url,
+                    source=f"Dynamic: {query[:40]}",
+                    published=pub_date,
+                    content=content,
+                    source_type="gnews",
+                )
+                all_articles.append(article)
+                count += 1
+
+            if count > 0:
+                print(f"      Found {count} articles")
+
+        except requests.RequestException as e:
+            print(f"      Error: {e}")
+        except Exception as e:
+            print(f"      Unexpected error: {e}")
+
+        time.sleep(2)
+
+    print(f"  Dynamic queries: {len(all_articles)} unique articles from {len(queries)} queries")
+    return sorted(all_articles, key=lambda a: a.published, reverse=True)
+
+
 def fetch_all_feeds(lookback_days: int = DEFAULT_LOOKBACK_DAYS, sources: list[str] = None) -> list[Article]:
     """Fetch all configured RSS-based feeds and return combined articles.
 
