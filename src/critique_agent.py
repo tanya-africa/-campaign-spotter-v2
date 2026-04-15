@@ -59,6 +59,12 @@ Ask: has anything like this ever actually worked? If not, why would it work now?
   in the relevant timeframe = higher.
 
 ADDITIONAL CHECKS:
+- REPLICABLE CAMPAIGNS AND TARGETS: If a campaign is designed to be replicated across
+  many jurisdictions, the target may be framed as a class ("county commissioners," "city
+  councils"). Don't penalize G1 for this if the class is a set of clearly identifiable
+  local decision-makers with real authority. BUT: the idea should name a specific FIRST
+  target — the best place to run it first. If it doesn't, note that in critique rather
+  than failing the gate.
 - Is the constituency REAL or ASPIRATIONAL? "Veterans could be organized" = aspirational.
   "Veterans are already speaking out" = real. Downgrade beyond-choir if aspirational.
 - Is this ONE campaign or three mashed together? If the target, constituency, and ask

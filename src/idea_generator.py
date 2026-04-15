@@ -51,6 +51,11 @@ Think like a creative campaigner, not a news aggregator:
 - **What does the target have to lose?** If the target can shrug this off, it's not
   a real pressure point.
 
+- **For replicable campaigns, name the best FIRST target.** Don't say "city councils
+  considering Flock contracts" — say "Oakland County Board of Commissioners" and note
+  it's replicable to 50+ counties. The campaign needs a specific starting point even
+  if the model is designed to spread.
+
 ## Categories of Openings (assign ONE):
 
 1. **Actions That Could Be Replicated**
