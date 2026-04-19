@@ -290,3 +290,104 @@ def run_critique(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
         print(f"    Total demoted to watch list by critique: {len(newly_watch)}")
 
     return still_scored + newly_watch + watch
+
+
+# =============================================================================
+# Coverage Research — uses web_search to identify existing org coverage
+# =============================================================================
+
+COVERAGE_RESEARCH_SYSTEM_PROMPT = """You are researching existing organizing coverage for
+a campaign idea. Your job is to identify:
+1. Which established organizations are actively campaigning on this
+2. How active they are — full-time staff, ongoing effort, or quiet/dormant
+3. What specific gap a new small AI-augmented team could fill — a geography,
+   a tactic, a constituency, or a target the existing orgs aren't touching
+
+Be honest. If the campaign is already well-covered by experienced organizations
+and a new effort would just add noise, say so plainly. If there's a real gap
+(e.g., national org focuses on legal/legislative but no one's doing local
+organizing of the constituency), describe the gap concretely."""
+
+
+COVERAGE_RESEARCH_MIN_SCORE = 2.0
+
+
+def _research_one_idea(client: anthropic.Anthropic, idea: CampaignIdea) -> str:
+    """Run a single coverage-research call with web_search. Returns the coverage summary."""
+
+    user_prompt = f"""Research existing organizing coverage for this campaign:
+
+- Target: {idea.target}
+- Ask: {idea.ask}
+- Issue: {idea.issue_domain}
+- Where: {idea.where}
+- Theory of leverage: {idea.theory_of_leverage}
+
+Use web search to identify which organizations are actively campaigning on this.
+
+Then write ONE paragraph (≤120 words) covering:
+1. The 2-4 most relevant existing organizations and what they are doing
+2. Specifically what gap a new small AI-augmented team could fill, OR state
+   plainly that there is no meaningful gap and a new effort would duplicate
+   existing work.
+
+Do not include a preamble. Just the paragraph."""
+
+    response = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=1024,
+        system=COVERAGE_RESEARCH_SYSTEM_PROMPT,
+        tools=[{
+            "type": "web_search_20250305",
+            "name": "web_search",
+            "max_uses": 3,
+        }],
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    text_parts = []
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            text_parts.append(block.text)
+
+    return " ".join(p.strip() for p in text_parts if p.strip())
+
+
+def research_coverage(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
+    """
+    For each scored idea above COVERAGE_RESEARCH_MIN_SCORE, research existing
+    organizational coverage using web_search and write the result to
+    existing_coverage. Watch-list and low-score ideas are skipped.
+    Failures write 'research failed' so the omission is visible in output.
+    """
+    if not ideas:
+        return ideas
+
+    if not ANTHROPIC_API_KEY:
+        raise ValueError("ANTHROPIC_API_KEY not set.")
+
+    eligible = [
+        i for i in ideas
+        if not i.is_watch_list and i.weighted_score >= COVERAGE_RESEARCH_MIN_SCORE
+    ]
+
+    if not eligible:
+        print("  Coverage research: no ideas scored high enough to research")
+        return ideas
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    print(f"  Coverage research: running web_search on {len(eligible)} ideas (score ≥ {COVERAGE_RESEARCH_MIN_SCORE})...")
+
+    for i, idea in enumerate(eligible, 1):
+        print(f"    [{i}/{len(eligible)}] {idea.headline[:70]}")
+        try:
+            summary = _research_one_idea(client, idea)
+            idea.existing_coverage = summary if summary else "research failed (empty response)"
+        except (anthropic.APIError, anthropic.APIStatusError) as e:
+            print(f"      Warning: research failed ({type(e).__name__}: {e})")
+            idea.existing_coverage = "research failed"
+        except Exception as e:
+            print(f"      Warning: research failed ({type(e).__name__}: {e})")
+            idea.existing_coverage = "research failed"
+
+    return ideas

@@ -390,6 +390,12 @@ def generate_ideas(articles: list[Article]) -> list[CampaignIdea]:
         all_ideas = scored + watch
 
     # =========================================================================
+    # Pass 3: Coverage research (web_search on high-scored ideas only)
+    # =========================================================================
+    from critique_agent import research_coverage
+    all_ideas = research_coverage(all_ideas)
+
+    # =========================================================================
     # Sort and return
     # =========================================================================
     scored = [i for i in all_ideas if not i.is_watch_list]
