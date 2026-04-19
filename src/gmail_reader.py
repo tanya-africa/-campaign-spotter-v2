@@ -23,6 +23,7 @@ from config import (
     GMAIL_CREDENTIALS_FILE,
     GMAIL_TOKEN_FILE,
     GMAIL_SCOPES,
+    GMAIL_LABEL,
     CREDENTIALS_DIR,
     DEFAULT_LOOKBACK_DAYS,
 )
@@ -237,9 +238,9 @@ def fetch_emails(lookback_days: int = DEFAULT_LOOKBACK_DAYS) -> list[Article]:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         after_timestamp = int(cutoff.timestamp())
 
-        query = f"after:{after_timestamp}"
+        query = f"label:{GMAIL_LABEL} after:{after_timestamp}"
 
-        print(f"Fetching emails from Gmail (last {lookback_days} days)...")
+        print(f"Fetching emails from Gmail label '{GMAIL_LABEL}' (last {lookback_days} days)...")
 
         # Gmail API paginates at 100 messages per request
         # For 30-day lookback, we may need multiple pages

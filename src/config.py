@@ -21,6 +21,10 @@ GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
+# Gmail label the scanner reads from. Create this label in Gmail and apply it
+# via a filter (see campaign-spotter-newsletter-tracker.md for the filter string).
+GMAIL_LABEL = "campaign-scanner-newsletters"
+
 # Claude API
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
