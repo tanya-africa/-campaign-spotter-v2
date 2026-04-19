@@ -56,6 +56,15 @@ Think like a creative campaigner, not a news aggregator:
   it's replicable to 50+ counties. The campaign needs a specific starting point even
   if the model is designed to spread.
 
+- **When the news is a state-level success, name the next vulnerable state, not a class.**
+  If a state just passed something (NPV, ranked choice, redistricting reform, campaign
+  finance reform, etc.), the campaign idea is NOT "pressure holdout states" — it's
+  "pressure [specific next state + named decision-maker] before [specific window closes]."
+  Pick the next state by: (a) opportunity (trifecta, governor with authority, live bill),
+  (b) window (session schedule, election cycle, trifecta expiration), (c) a named
+  decision-maker who could actually deliver. Abstract "holdout states" framing almost
+  never produces a winnable campaign.
+
 ## Categories of Openings (assign ONE):
 
 1. **Actions That Could Be Replicated**

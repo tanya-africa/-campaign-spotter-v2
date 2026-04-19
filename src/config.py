@@ -170,6 +170,16 @@ GOOGLE_NEWS_QUERIES = [
     "climate action state local resist rollback 2026",
     "press freedom journalist protect information 2026",
     "veterans military criticize administration 2026",
+
+    # --- Category 8: State-Level Democracy Reforms ---
+    "National Popular Vote compact state legislature 2026",
+    "ranked choice voting state ballot initiative 2026",
+    "independent redistricting commission state 2026",
+    "state campaign finance reform Citizens United 2026",
+    "automatic voter registration state legislation 2026",
+    "state voting rights expansion legislation 2026",
+    "gerrymandering state reform ballot measure 2026",
+    "state small-dollar public financing elections 2026",
 ]
 
 GOOGLE_NEWS_RSS_TEMPLATE = "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
