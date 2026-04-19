@@ -69,6 +69,9 @@ class CampaignIdea:
     # Self-critique annotations (filled by second pass)
     critique_notes: str = ""         # What the critique step found
     pre_critique_score: float = 0.0  # Score before adjustment
+    # Fit-for-us tags (filled by critique + coverage research)
+    ai_leverage: str = ""            # Where AI-augmentation changes the odds, or ""
+    existing_coverage: str = ""      # Who else is on this + what gap we'd fill, or ""
     # Grouping
     priority: int = 0                # Mapped from weighted_score
     campaign_group: str = ""

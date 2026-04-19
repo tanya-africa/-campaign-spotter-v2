@@ -58,6 +58,19 @@ Ask: has anything like this ever actually worked? If not, why would it work now?
 - Corporate targets that can wait it out = 1 max. Politicians facing an election
   in the relevant timeframe = higher.
 
+MANDATE 4: AI LEVERAGE — Name where AI-augmentation changes the odds.
+This is a small team augmented with AI. Not every good campaign is one they should
+run. Evaluate where AI-augmentation is actually load-bearing:
+- HIGH leverage: personalized outreach at scale, rapid research on dozens of
+  targets, real-time stakeholder mapping, synthesizing public comment dumps,
+  iterating content across many audiences, monitoring for signals in noisy data,
+  building and maintaining target-specific playbooks.
+- LOW leverage: shoe-leather field in one locality, coalition convening that
+  requires trusted relationships, lobbying a single statehouse, courtroom work.
+- Output one sentence naming the specific mechanism where AI helps, or say
+  "no clear AI leverage — better suited to a conventional campaign team" if
+  the campaign is fundamentally relationship- or ground-presence-dependent.
+
 ADDITIONAL CHECKS:
 - REPLICABLE CAMPAIGNS AND TARGETS: If a campaign is designed to be replicated across
   many jurisdictions, the target may be framed as a class ("county commissioners," "city
@@ -134,7 +147,11 @@ and adjust where the first pass was too generous. Default assumption: scores are
 7. **What does winning enable?** — Note the flow-on potential. Does this win create
    leverage, precedent, or proof of concept for the next fight? Or is it a dead end?
 
-8. **Duplicates** — Are any of these the same campaign from different angles?
+8. **AI leverage** — Apply your mandate. Name the specific mechanism where AI
+   augmentation increases the odds, or say "no clear AI leverage" if this is
+   fundamentally a conventional field/lobbying/relationship campaign.
+
+9. **Duplicates** — Are any of these the same campaign from different angles?
 
 ## Response Format
 
@@ -153,7 +170,8 @@ Return a JSON array with one entry per idea:
     "score_winnability": 2,
     "critique_notes": "D3 downgraded from 2 to 0: data center opposition is environmental/corporate, not anti-authoritarian — no direct link to government power. D4 downgraded: theoretical replicability only, no proven template yet. Win could create precedent for other zoning fights if it produces model ordinance language.",
     "campaign_group": "",
-    "win_enables": "If this produces model ordinance language, it becomes a template for 50+ other communities facing the same issue."
+    "win_enables": "If this produces model ordinance language, it becomes a template for 50+ other communities facing the same issue.",
+    "ai_leverage": "AI can rapid-research 50+ similar zoning fights in parallel, draft target-specific public comments, and monitor council agendas for decision windows. High leverage."
   }}
 ]
 ```
@@ -242,6 +260,7 @@ def run_critique(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
                     idea.score_winnability = critique.get("score_winnability", idea.score_winnability)
                     idea.critique_notes = critique.get("critique_notes", "")
                     idea.campaign_group = critique.get("campaign_group", idea.campaign_group)
+                    idea.ai_leverage = critique.get("ai_leverage", "")
 
                     # Capture win_enables in critique notes if present
                     win_enables = critique.get("win_enables", "")

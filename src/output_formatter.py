@@ -105,6 +105,8 @@ def write_markdown(ideas: list[CampaignIdea], output_path: str = None) -> str:
             lines.append(f"\n**Rationale**: {idea.score_rationale}")
         if idea.critique_notes:
             lines.append(f"\n**Critique**: {idea.critique_notes}")
+        if idea.ai_leverage:
+            lines.append(f"\n**AI leverage**: {idea.ai_leverage}")
         if idea.pre_critique_score and idea.pre_critique_score != idea.weighted_score:
             lines.append(f"\n*Score adjusted from {idea.pre_critique_score:.2f} to {idea.weighted_score:.2f} by self-critique*")
         if idea.campaign_group:
@@ -159,7 +161,7 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
         "Campaign Group",
         "G:Target", "G:Ask", "G:Window", "Gate Fail",
         "D:Choir", "D:Pressure", "D:AntiAuth", "D:Repl", "D:Win",
-        "Rationale", "Critique Notes", "Pre-Critique Score",
+        "Rationale", "Critique Notes", "AI Leverage", "Pre-Critique Score",
         "Category", "Issue Domain",
         "Source", "Source URL", "Additional Sources",
     ]
@@ -213,6 +215,7 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
             idea.score_winnability if not idea.is_watch_list else "",
             idea.score_rationale,
             idea.critique_notes,
+            idea.ai_leverage,
             idea.pre_critique_score if idea.pre_critique_score else "",
             idea.category,
             idea.issue_domain,
@@ -243,9 +246,9 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
         12: 25,
         13: 8, 14: 8, 15: 8, 16: 30,
         17: 8, 18: 8, 19: 8, 20: 8, 21: 8,
-        22: 40, 23: 40, 24: 12,
-        25: 25, 26: 25,
-        27: 20, 28: 35, 29: 35,
+        22: 40, 23: 40, 24: 40, 25: 12,
+        26: 25, 27: 25,
+        28: 20, 29: 35, 30: 35,
     }
     for col, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
