@@ -58,19 +58,6 @@ Ask: has anything like this ever actually worked? If not, why would it work now?
 - Corporate targets that can wait it out = 1 max. Politicians facing an election
   in the relevant timeframe = higher.
 
-MANDATE 4: AI LEVERAGE — Name where AI-augmentation changes the odds.
-This is a small team augmented with AI. Not every good campaign is one they should
-run. Evaluate where AI-augmentation is actually load-bearing:
-- HIGH leverage: personalized outreach at scale, rapid research on dozens of
-  targets, real-time stakeholder mapping, synthesizing public comment dumps,
-  iterating content across many audiences, monitoring for signals in noisy data,
-  building and maintaining target-specific playbooks.
-- LOW leverage: shoe-leather field in one locality, coalition convening that
-  requires trusted relationships, lobbying a single statehouse, courtroom work.
-- Output one sentence naming the specific mechanism where AI helps, or say
-  "no clear AI leverage — better suited to a conventional campaign team" if
-  the campaign is fundamentally relationship- or ground-presence-dependent.
-
 ADDITIONAL CHECKS:
 - REPLICABLE CAMPAIGNS AND TARGETS: If a campaign is designed to be replicated across
   many jurisdictions, the target may be framed as a class ("county commissioners," "city
@@ -147,11 +134,7 @@ and adjust where the first pass was too generous. Default assumption: scores are
 7. **What does winning enable?** — Note the flow-on potential. Does this win create
    leverage, precedent, or proof of concept for the next fight? Or is it a dead end?
 
-8. **AI leverage** — Apply your mandate. Name the specific mechanism where AI
-   augmentation increases the odds, or say "no clear AI leverage" if this is
-   fundamentally a conventional field/lobbying/relationship campaign.
-
-9. **Duplicates** — Are any of these the same campaign from different angles?
+8. **Duplicates** — Are any of these the same campaign from different angles?
 
 ## Response Format
 
@@ -170,8 +153,7 @@ Return a JSON array with one entry per idea:
     "score_winnability": 2,
     "critique_notes": "D3 downgraded from 2 to 0: data center opposition is environmental/corporate, not anti-authoritarian — no direct link to government power. D4 downgraded: theoretical replicability only, no proven template yet. Win could create precedent for other zoning fights if it produces model ordinance language.",
     "campaign_group": "",
-    "win_enables": "If this produces model ordinance language, it becomes a template for 50+ other communities facing the same issue.",
-    "ai_leverage": "AI can rapid-research 50+ similar zoning fights in parallel, draft target-specific public comments, and monitor council agendas for decision windows. High leverage."
+    "win_enables": "If this produces model ordinance language, it becomes a template for 50+ other communities facing the same issue."
   }}
 ]
 ```
@@ -260,7 +242,6 @@ def run_critique(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
                     idea.score_winnability = critique.get("score_winnability", idea.score_winnability)
                     idea.critique_notes = critique.get("critique_notes", "")
                     idea.campaign_group = critique.get("campaign_group", idea.campaign_group)
-                    idea.ai_leverage = critique.get("ai_leverage", "")
 
                     # Capture win_enables in critique notes if present
                     win_enables = critique.get("win_enables", "")
@@ -290,6 +271,126 @@ def run_critique(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
         print(f"    Total demoted to watch list by critique: {len(newly_watch)}")
 
     return still_scored + newly_watch + watch
+
+
+# =============================================================================
+# AI Leverage Tagging — independent of scoring, isolated from critique
+# =============================================================================
+
+AI_LEVERAGE_SYSTEM_PROMPT = """You are evaluating whether AI-augmentation specifically
+increases the odds of success for a campaign. This evaluation is INDEPENDENT of whether
+the campaign is good. You are NOT scoring the campaign. Do NOT comment on winnability,
+constituency strength, or target specificity. Only assess AI-augmentation fit.
+
+HIGH AI leverage mechanisms:
+- Personalized outreach at scale across many targets
+- Rapid research on dozens of targets/institutions in parallel
+- Real-time stakeholder mapping and network analysis
+- Synthesizing public comment dumps or other noisy data
+- Iterating content across many audiences/regions
+- Monitoring signals in noisy data streams
+- Building and maintaining target-specific playbooks
+
+LOW AI leverage mechanisms:
+- Shoe-leather field organizing in one locality
+- Coalition convening that requires trusted relationships
+- Lobbying a single statehouse or decision-maker
+- Courtroom work
+- Fundamentally ground-presence-dependent campaigns
+
+Output for each idea: one sentence naming the specific mechanism where AI helps,
+or "no clear AI leverage — better suited to a conventional campaign team" if the
+campaign is fundamentally relationship- or ground-presence-dependent."""
+
+
+AI_LEVERAGE_MIN_SCORE = 2.0
+AI_LEVERAGE_CHUNK_SIZE = 10
+
+
+def _build_ai_leverage_prompt(ideas: list[CampaignIdea]) -> str:
+    ideas_text = ""
+    for i, idea in enumerate(ideas):
+        ideas_text += f"""
+---
+IDEA {i+1}: {idea.headline}
+Target: {idea.target}
+Ask: {idea.ask}
+Constituency: {idea.constituency}
+Theory of leverage: {idea.theory_of_leverage}
+Where: {idea.where}
+---
+"""
+    return f"""Evaluate AI-augmentation fit for each campaign idea below.
+
+{ideas_text}
+
+Return a JSON array with one entry per idea:
+```json
+[
+  {{"idea_index": 1, "ai_leverage": "one-sentence mechanism statement"}},
+  {{"idea_index": 2, "ai_leverage": "..."}}
+]
+```
+
+Return ONLY the JSON array, no other text."""
+
+
+def tag_ai_leverage(ideas: list[CampaignIdea]) -> list[CampaignIdea]:
+    """
+    Tag scored ideas above AI_LEVERAGE_MIN_SCORE with an AI-augmentation
+    assessment. Runs after critique so it uses post-critique scores as the
+    filter, but is completely isolated from scoring — the agent cannot adjust
+    scores here.
+    """
+    if not ideas:
+        return ideas
+
+    if not ANTHROPIC_API_KEY:
+        raise ValueError("ANTHROPIC_API_KEY not set.")
+
+    eligible = [
+        i for i in ideas
+        if not i.is_watch_list and i.weighted_score >= AI_LEVERAGE_MIN_SCORE
+    ]
+
+    if not eligible:
+        print("  AI leverage tagging: no ideas scored high enough")
+        return ideas
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    print(f"  AI leverage tagging: evaluating {len(eligible)} ideas...")
+
+    for chunk_start in range(0, len(eligible), AI_LEVERAGE_CHUNK_SIZE):
+        chunk = eligible[chunk_start:chunk_start + AI_LEVERAGE_CHUNK_SIZE]
+        prompt = _build_ai_leverage_prompt(chunk)
+
+        try:
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2000,
+                system=AI_LEVERAGE_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.content[0].text.strip()
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+                text = text.strip()
+            tags = json.loads(text)
+
+            for tag in tags:
+                idx = tag.get("idea_index", 0) - 1
+                if 0 <= idx < len(chunk):
+                    chunk[idx].ai_leverage = tag.get("ai_leverage", "")
+
+        except (json.JSONDecodeError, anthropic.APIError) as e:
+            print(f"    Warning: AI leverage chunk failed ({type(e).__name__}: {e})")
+            for idea in chunk:
+                if not idea.ai_leverage:
+                    idea.ai_leverage = "tagging failed"
+
+    return ideas
 
 
 # =============================================================================

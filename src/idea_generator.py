@@ -390,9 +390,14 @@ def generate_ideas(articles: list[Article]) -> list[CampaignIdea]:
         all_ideas = scored + watch
 
     # =========================================================================
-    # Pass 3: Coverage research (web_search on high-scored ideas only)
+    # Pass 3: AI leverage tagging (isolated from scoring)
     # =========================================================================
-    from critique_agent import research_coverage
+    from critique_agent import tag_ai_leverage, research_coverage
+    all_ideas = tag_ai_leverage(all_ideas)
+
+    # =========================================================================
+    # Pass 4: Coverage research (web_search on high-scored ideas only)
+    # =========================================================================
     all_ideas = research_coverage(all_ideas)
 
     # =========================================================================
