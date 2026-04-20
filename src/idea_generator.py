@@ -137,6 +137,23 @@ opportunities — pro-democracy, anti-authoritarian campaigns that a small team 
 5. An article might suggest multiple campaign ideas, or none.
 6. Score each idea against the gates and dimensions below.
 
+## Tools available (use sparingly):
+
+You have `web_search`. Use it ONLY when you need specific facts you don't have, and
+those facts would change the campaign design:
+
+- For state-level political events, identify the next vulnerable state — which state
+  has a live bill on the same topic, which has a Dem/Rep trifecta with a closing
+  window, who chairs the relevant committee. This matters when the news is "State X
+  just passed Y" and you need to name the next target state.
+- To name a specific legislator, sheriff, AG, mayor, or official by name when the
+  article references them only by title ("the Michigan Senate Majority Leader").
+- To verify whether a campaign or policy window is still open.
+
+Do NOT search for background context, explanations, or anything that doesn't
+directly affect target/ask/constituency/leverage. Budget is tight — prefer to
+skip generating a campaign idea over burning searches on nice-to-have context.
+
 Respond with a JSON array. For each campaign idea:
 ```json
 [
@@ -328,10 +345,18 @@ def generate_ideas(articles: list[Article]) -> list[CampaignIdea]:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
                 max_tokens=4000,
+                tools=[{
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                    "max_uses": 5,
+                }],
                 messages=[{"role": "user", "content": prompt}]
             )
 
-            response_text = response.content[0].text.strip()
+            # With web_search, content may include tool_use and multiple text blocks.
+            # The final JSON is in the last text block.
+            text_blocks = [b.text for b in response.content if getattr(b, "type", None) == "text"]
+            response_text = (text_blocks[-1] if text_blocks else "").strip()
             results = _parse_json_response(response_text)
 
             batch_ideas = 0

@@ -27,7 +27,7 @@ GMAIL_LABEL = "campaign-scanner-newsletters"
 
 # Claude API
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+CLAUDE_MODEL = "claude-sonnet-4-6"
 
 # Time settings
 DEFAULT_LOOKBACK_DAYS = 30
