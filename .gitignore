@@ -9,6 +9,16 @@ data/openings.md
 data/openings.xlsx
 data/test_openings.xlsx
 data/scan_history.json
+data/articles_deduped.json
+data/ideas.json
+data/ideas_raw.json
+data/ideas.md
+data/ideas.xlsx
+data/checkpoint_*.json
+data/query_yield_log.json
+data/dynamic_query_categories.json
+data/digest_test/
+data/source_analysis/
 
 # Python
 __pycache__/
