@@ -33,7 +33,7 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 DEFAULT_LOOKBACK_DAYS = 30
 
 # Output settings
-MAX_OPENINGS = 200
+MAX_OPENINGS = 400
 BATCH_SIZE = 30  # Articles per AI processing batch
 
 # =============================================================================
@@ -73,33 +73,11 @@ NATIONAL_RSS_FEEDS = {
 # =============================================================================
 
 REGIONAL_RSS_FEEDS = {
-    # --- Swing States ---
-    "Arizona Republic": "https://rssfeeds.azcentral.com/phoenix/politics",
-    "Atlanta Journal-Constitution": "https://www.ajc.com/politics/feed/",
-    "Milwaukee Journal Sentinel": "https://rssfeeds.jsonline.com/milwaukee/news",
-    "Detroit Free Press": "https://rssfeeds.freep.com/detroit/news",
-    "Philadelphia Inquirer": "https://www.inquirer.com/arcio/rss/category/politics/",
-    "Las Vegas Review-Journal": "https://www.reviewjournal.com/feed/",
-    "Charlotte Observer": "https://www.charlotteobserver.com/news/politics-government/index.rss",
-    "Raleigh News & Observer": "https://www.newsobserver.com/news/politics-government/index.rss",
-
-    # --- Active Resistance/Policy States ---
-    "Sacramento Bee": "https://www.sacbee.com/news/politics-government/index.rss",
-    "San Francisco Chronicle": "https://www.sfchronicle.com/politics/feed/",
-    "Minneapolis Star Tribune": "https://www.startribune.com/politics/rss/",
-    "Denver Post": "https://www.denverpost.com/politics/feed/",
+    # Most regional papers have killed public RSS or block automated requests.
+    # Dead/blocked feeds are replaced by Google News site: queries below.
+    "Las Vegas Review-Journal": "https://www.reviewjournal.com/news/politics-and-government/feed/",
     "Seattle Times": "https://www.seattletimes.com/seattle-news/politics/feed/",
-    "Boston Globe": "https://www.bostonglobe.com/rss/politics",
-    "Chicago Tribune": "https://www.chicagotribune.com/arcio/rss/category/politics/",
-    "Portland Oregonian": "https://www.oregonlive.com/politics/rss/",
-    "Albany Times Union": "https://www.timesunion.com/politics/feed/",
-
-    # --- States with interesting dynamics ---
-    "Austin American-Statesman": "https://www.statesman.com/news/politics-government/index.rss",
-    "Miami Herald": "https://www.miamiherald.com/news/politics-government/index.rss",
-    "Columbus Dispatch": "https://www.dispatch.com/news/politics/index.rss",
     "Pittsburgh Post-Gazette": "https://www.post-gazette.com/rss/politics",
-    "St. Louis Post-Dispatch": "https://www.stltoday.com/news/local/govt-and-politics/rss/",
 }
 
 # =============================================================================
@@ -109,77 +87,174 @@ REGIONAL_RSS_FEEDS = {
 GOOGLE_NEWS_QUERIES = [
     # --- Category 1: Actions That Could Be Replicated ---
     # Executive actions
-    "governor executive order sanctuary immigration 2026",
-    "governor executive order protect reproductive rights 2026",
-    "attorney general lawsuit federal overreach 2026",
-    "attorney general legal challenge Trump administration 2026",
-    "mayor city council resolution resist federal 2026",
-    "state legislation protect immigrants workers 2026",
+    "governor executive order sanctuary immigration",
+    "governor executive order protect reproductive rights",
+    "state legislation protect immigrants workers",
 
     # Institutional actions
-    "school district sanctuary resolution immigration 2026",
-    "university refuse federal mandate sanctuary 2026",
-    "hospital refuse comply federal reporting 2026",
-    "church sanctuary immigration denomination 2026",
-    "union solidarity action resist federal 2026",
-    "library resist book ban censorship 2026",
+    "school district sanctuary resolution immigration",
+    "university refuse federal mandate sanctuary",
+    "hospital refuse comply federal reporting",
+    "church sanctuary immigration denomination",
+    "union solidarity action resist federal",
+    "library resist book ban censorship",
 
     # Business actions
-    "business refuse federal contract protest 2026",
-    "company end contract federal government resist 2026",
+    "company end contract federal government resist",
 
     # --- Category 2: Cracks and Fissures ---
-    "Republican criticize Trump break ranks 2026",
-    "Republican oppose Trump policy GOP dissent 2026",
-    "sheriff refuse ICE cooperation police 2026",
-    "law enforcement criticize federal immigration raid 2026",
-    "conservative criticize Trump donor withdraw 2026",
-    "government employee resign protest whistleblower 2026",
+    "law enforcement criticize federal immigration raid",
+    "conservative criticize Trump donor withdraw",
+    "government employee resign protest whistleblower",
+    "Republican senator breaks ranks Trump",
+    "conservative Republican official criticize ICE Trump immigration",
 
     # --- Category 3: Gaps and Absences ---
-    "model legislation state protect rights 2026",
-    "mutual aid network community organize 2026",
+    "model legislation state protect rights",
+    "mutual aid network community organize",
 
     # --- Category 4: Pending Decisions and Leverage Points ---
-    "federal contract renewal controversy decision 2026",
-    "state legislation debate vote protect rights 2026",
-    "court ruling pending federal overreach 2026",
-    "comment period federal regulation public 2026",
-    "local election school board sheriff DA 2026",
+    "federal contract renewal controversy decision",
+    "state legislation debate vote protect rights",
+    "court ruling pending federal overreach",
+    "comment period federal regulation public",
+    "local election school board sheriff DA",
 
     # --- Category 5: Emerging Patterns ---
-    "protest movement rally march growing 2026",
-    "boycott campaign consumer grassroots 2026",
-    "walkout strike workers resistance 2026",
-    "spontaneous protest uncoordinated multiple cities 2026",
+    "protest movement rally march growing",
+    "boycott campaign consumer grassroots",
+    "walkout strike workers resistance",
+    "spontaneous protest uncoordinated multiple cities",
 
     # --- Category 6: Outrages and Galvanizing Events ---
-    "federal overreach backlash community outrage 2026",
-    "ICE raid community response outrage 2026",
-    "DOGE cuts community impact response 2026",
+    "federal overreach backlash community outrage",
+    "ICE raid community response outrage",
+    "DOGE cuts community impact response",
 
     # --- Category 7: Defensive Needs ---
-    "anticipated federal action prepare community defense 2026",
-    "state attack voting rights local control 2026",
-    "threat existing protections community prepare 2026",
+    "anticipated federal action prepare community defense",
+    "state attack voting rights local control",
+    "threat existing protections community prepare",
 
     # --- Cross-cutting / issue-specific ---
-    "ACA health care subsidy expire organize 2026",
-    "education cuts protest parents organize 2026",
-    "trans rights protect state local action 2026",
-    "climate action state local resist rollback 2026",
-    "press freedom journalist protect information 2026",
-    "veterans military criticize administration 2026",
+    "ACA health care subsidy expire organize",
+    "education cuts protest parents organize",
+    "trans rights protect state local action",
+    "climate action state local resist rollback",
+    "press freedom journalist protect information",
+    "veterans military criticize administration",
 
     # --- Category 8: State-Level Democracy Reforms ---
-    "National Popular Vote compact state legislature 2026",
-    "ranked choice voting state ballot initiative 2026",
-    "independent redistricting commission state 2026",
-    "state campaign finance reform Citizens United 2026",
-    "automatic voter registration state legislation 2026",
-    "state voting rights expansion legislation 2026",
-    "gerrymandering state reform ballot measure 2026",
-    "state small-dollar public financing elections 2026",
+    "National Popular Vote compact state legislature",
+    "ranked choice voting state ballot initiative",
+    "independent redistricting commission state",
+    "state campaign finance reform Citizens United",
+    "automatic voter registration state legislation",
+    "state voting rights expansion legislation",
+    "gerrymandering state reform ballot measure",
+    "state small-dollar public financing elections",
+
+    # --- Corporate contractor pressure ---
+    "company drops ICE contract protest",
+    "ICE contractor community pressure campaign",
+
+    # --- Detention infrastructure / warehouse buildout ---
+    "warehouse ICE detention community opposition",
+    "ICE detention facility permit denied blocked",
+    "utility board ICE detention water sewer",
+    "ICE facility acquisition community fight",
+
+    # --- Small business and economic impact ---
+    "small business ICE raid economic loss",
+    "restaurant business ICE enforcement revenue decline",
+    "chamber of commerce ICE immigration stance",
+
+    # --- Conservative and Republican cracks ---
+    "Republican mayor oppose ICE detention",
+    "property rights ICE warrant search",
+
+    # --- Platform and surveillance accountability ---
+    "Google Meta subpoena ICE user data",
+    "tech platform government data request ICE",
+    "administrative subpoena ICE First Amendment",
+
+    # --- Detention conditions and medical ---
+    "immigration detention medical neglect lawsuit",
+    "ICE detention deaths conditions report",
+    "detention center health violation children",
+
+    # --- Coalition fracture (MAHA-style) ---
+    "MAHA Republican coalition fracture Trump policy",
+    "health voters pesticide food safety Republican",
+    "Trump base opposition policy betrayal",
+
+    # --- Local government action ---
+    # Immigration / ICE
+    "county commission ICE detention ordinance 2026",
+    "sheriff refuse ICE detainer cooperation 2026",
+    "city council sanctuary resolution vote 2026",
+    "local government refuse DOGE cooperate federal 2026",
+
+    # Education
+    "school board refuse federal directive 2026",
+    "state legislature book ban curriculum restrict 2026",
+    "university board federal funding compliance 2026",
+
+    # Elections / voting rights
+    "state legislature ballot access voting rights bill 2026",
+    "county election board certification policy 2026",
+
+    # State-level federal resistance
+    "state attorney general lawsuit federal government 2026",
+    "state legislature preemption local government 2026",
+
+    # Surveillance
+    "city council surveillance technology contract vote 2026",
+
+    # Divestment
+    "state treasurer divestment resolution 2026",
+
+    # Homelessness
+    "city council homeless encampment sweep resist 2026",
+
+    # Labor
+    "state legislature right to work repeal 2026",
+    "city council project labor agreement vote 2026",
+
+    # Reproductive rights
+    "state attorney general abortion prosecute 2026",
+    "district attorney refuse prosecute abortion 2026",
+
+    # --- Housing ---
+    "city council rent control ordinance vote 2026",
+    "tenant union rent strike eviction organize 2026",
+    "state legislature rent stabilization tenant protection 2026",
+    "zoning affordable housing council community vote 2026",
+
+    # --- Labor beyond strike/walkout ---
+    "public employee collective bargaining state legislature 2026",
+    "state legislature worker protection wage theft 2026",
+    "NLRB captive audience meeting worker rights 2026",
+
+    # --- Environmental / utility ---
+    "pipeline permit community opposition state 2026",
+    "state public utility commission rate increase hearing 2026",
+    "agricultural pollution rural community organize 2026",
+
+    # --- Police accountability (non-ICE) ---
+    "civilian review board police department vote 2026",
+    "consent decree police reform community oversight 2026",
+
+    # --- LGBTQ+ state-level ---
+    "state legislature gender affirming care ban 2026",
+    "school board trans student policy vote 2026",
+
+    # --- Disability / Medicaid ---
+    "state Medicaid home care cuts community response 2026",
+    "disability services state budget cut advocate 2026",
+
+    # --- Religious-right fractures ---
+    "religious denomination statement Trump policy immigration 2026",
 ]
 
 GOOGLE_NEWS_RSS_TEMPLATE = "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"

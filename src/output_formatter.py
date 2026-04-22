@@ -50,13 +50,12 @@ def write_markdown(ideas: list[CampaignIdea], output_path: str = None) -> str:
     lines.append("\n---")
     lines.append("\n## Summary")
 
-    lines.append("\n### By Priority (scored)")
-    priority_counts = Counter(i.priority for i in scored)
-    for p in range(5, 0, -1):
-        count = priority_counts.get(p, 0)
-        if count > 0:
-            label = {5: "Exceptional", 4: "Strong", 3: "Solid", 2: "Low priority"}[p]
-            lines.append(f"- **Priority {p}** ({label}): {count}")
+    lines.append("\n### By Score Range (scored)")
+    score_bands = [("Exceptional (≥3.5)", 3.5, 4.01), ("Strong (≥2.5)", 2.5, 3.5), ("Solid (≥1.5)", 1.5, 2.5), ("Low (<1.5)", 0, 1.5)]
+    for label, lo, hi in score_bands:
+        count = sum(1 for i in scored if lo <= i.weighted_score < hi)
+        if count:
+            lines.append(f"- **{label}**: {count}")
 
     lines.append("\n### By Issue Domain")
     domain_counts = Counter(i.issue_domain for i in ideas)
@@ -69,23 +68,13 @@ def write_markdown(ideas: list[CampaignIdea], output_path: str = None) -> str:
         if domain and domain not in ISSUE_DOMAINS:
             lines.append(f"- **{domain}**: {count}")
 
-    # Campaign groups
-    groups = {}
-    for i in ideas:
-        if i.campaign_group:
-            groups.setdefault(i.campaign_group, []).append(i)
-    if groups:
-        lines.append(f"\n### Campaign Groups ({len(groups)})")
-        for label, members in sorted(groups.items()):
-            lines.append(f"- **{label}**: {len(members)} ideas")
-
     # Scored ideas ranked by weighted score
     lines.append("\n---")
     lines.append("\n## Scored Campaign Ideas")
 
     scored_ranked = sorted(scored, key=lambda i: i.weighted_score, reverse=True)
     for rank, idea in enumerate(scored_ranked, 1):
-        lines.append(f"\n### {rank}. [P{idea.priority} | {idea.weighted_score:.2f}] {idea.headline}")
+        lines.append(f"\n### {rank}. [{idea.weighted_score:.2f}] {idea.headline}")
         lines.append(f"\n**News hook**: {idea.news_hook}")
         lines.append(f"\n| | |")
         lines.append(f"|---|---|")
@@ -99,7 +88,7 @@ def write_markdown(ideas: list[CampaignIdea], output_path: str = None) -> str:
         lines.append(f"| **Category** | {idea.category} |")
 
         lines.append(f"\n**Gates**: target={idea.gate_named_target} | ask={idea.gate_binary_ask} | window={idea.gate_time_window}")
-        lines.append(f"**Scores**: choir={idea.score_beyond_choir} | pressure={idea.score_pressure_point} | anti-auth={idea.score_anti_authoritarian} | replication={idea.score_replication} | winnability={idea.score_winnability}")
+        lines.append(f"**Scores**: choir={idea.score_beyond_choir} | pressure={idea.score_pressure_point} | anti-auth={idea.score_anti_authoritarian} | replication={idea.score_replication} | winnability={idea.score_winnability} | energy={idea.score_energy_potential} | non-comply={idea.score_non_compliance}")
 
         if idea.score_rationale:
             lines.append(f"\n**Rationale**: {idea.score_rationale}")
@@ -108,12 +97,16 @@ def write_markdown(ideas: list[CampaignIdea], output_path: str = None) -> str:
         if idea.ai_leverage:
             lines.append(f"\n**AI leverage**: {idea.ai_leverage}")
         if idea.existing_coverage:
-            lines.append(f"\n**Existing coverage**: {idea.existing_coverage}")
+            score_label = (
+                f" [{idea.coverage_score} — "
+                + ["saturated", "crowded", "gap", "wide open"][idea.coverage_score]
+                + "]"
+                if idea.coverage_score is not None and 0 <= idea.coverage_score <= 3
+                else ""
+            )
+            lines.append(f"\n**Existing coverage**{score_label}: {idea.existing_coverage}")
         if idea.pre_critique_score and idea.pre_critique_score != idea.weighted_score:
             lines.append(f"\n*Score adjusted from {idea.pre_critique_score:.2f} to {idea.weighted_score:.2f} by self-critique*")
-        if idea.campaign_group:
-            lines.append(f"\n**Campaign group**: {idea.campaign_group}")
-
         lines.append(f"\n**Source**: [{idea.source_name}]({idea.source_url})")
         if idea.additional_sources:
             for src in idea.additional_sources:
@@ -157,13 +150,12 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
     ws.title = "Campaign Ideas"
 
     headers = [
-        "Status", "Priority", "Score", "Headline",
+        "Status", "Score", "Headline",
         "Target", "Ask", "Constituency", "Theory of Leverage",
         "News Hook", "Where", "Time Sensitivity",
-        "Campaign Group",
         "G:Target", "G:Ask", "G:Window", "Gate Fail",
-        "D:Choir", "D:Pressure", "D:AntiAuth", "D:Repl", "D:Win",
-        "Rationale", "Critique Notes", "AI Leverage", "Existing Coverage", "Pre-Critique Score",
+        "D1:Choir", "D2:Pressure", "D3:AntiAuth", "D4:Repl", "D5:Win", "D6:Energy", "D7:NonComply",
+        "Rationale", "Critique Notes", "AI Leverage", "Coverage Score", "Existing Coverage", "Pre-Critique Score",
         "Category", "Issue Domain",
         "Source", "Source URL", "Additional Sources",
     ]
@@ -179,14 +171,13 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
         cell.fill = header_fill
         cell.alignment = header_alignment
 
-    priority_fills = {
-        5: PatternFill("solid", fgColor="C6EFCE"),  # green
-        4: PatternFill("solid", fgColor="D9E2F3"),  # light blue
-        3: PatternFill("solid", fgColor="FFF2CC"),  # light yellow
-        2: PatternFill("solid", fgColor="FCE4D6"),  # light orange
-    }
+    def _score_fill(score: float):
+        if score >= 3.5: return PatternFill("solid", fgColor="C6EFCE")   # green
+        if score >= 2.5: return PatternFill("solid", fgColor="D9E2F3")   # light blue
+        if score >= 1.5: return PatternFill("solid", fgColor="FFF2CC")   # light yellow
+        return PatternFill("solid", fgColor="FCE4D6")                     # light orange
+
     watch_list_fill = PatternFill("solid", fgColor="E0E0E0")
-    priority_labels = {5: "5 - Exceptional", 4: "4 - Strong", 3: "3 - Solid", 2: "2 - Low priority"}
     wrap = Alignment(vertical="top", wrap_text=True)
 
     for row_idx, idea in enumerate(ideas, 2):
@@ -195,7 +186,6 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
 
         values = [
             status,
-            priority_labels.get(idea.priority, "—") if not idea.is_watch_list else "—",
             idea.weighted_score if not idea.is_watch_list else "",
             idea.headline,
             idea.target,
@@ -205,7 +195,6 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
             idea.news_hook,
             idea.where,
             idea.time_sensitivity,
-            idea.campaign_group,
             idea.gate_named_target,
             idea.gate_binary_ask,
             idea.gate_time_window,
@@ -215,9 +204,12 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
             idea.score_anti_authoritarian if not idea.is_watch_list else "",
             idea.score_replication if not idea.is_watch_list else "",
             idea.score_winnability if not idea.is_watch_list else "",
+            idea.score_energy_potential if not idea.is_watch_list else "",
+            idea.score_non_compliance if not idea.is_watch_list else "",
             idea.score_rationale,
             idea.critique_notes,
             idea.ai_leverage,
+            idea.coverage_score if idea.coverage_score is not None else "",
             idea.existing_coverage,
             idea.pre_critique_score if idea.pre_critique_score else "",
             idea.category,
@@ -236,10 +228,9 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
             for col in range(1, len(headers) + 1):
                 ws.cell(row=row_idx, column=col).fill = watch_list_fill
         else:
-            fill = priority_fills.get(idea.priority)
-            if fill:
-                for col in range(1, 4):
-                    ws.cell(row=row_idx, column=col).fill = fill
+            fill = _score_fill(idea.weighted_score)
+            for col in range(1, 3):
+                ws.cell(row=row_idx, column=col).fill = fill
 
     # Column widths
     col_widths = {
@@ -248,10 +239,10 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
         9: 40, 10: 20, 11: 25,
         12: 25,
         13: 8, 14: 8, 15: 8, 16: 30,
-        17: 8, 18: 8, 19: 8, 20: 8, 21: 8,
-        22: 40, 23: 40, 24: 40, 25: 50, 26: 12,
-        27: 25, 28: 25,
-        29: 20, 30: 35, 31: 35,
+        17: 8, 18: 8, 19: 8, 20: 8, 21: 8, 22: 8, 23: 8,
+        24: 40, 25: 40, 26: 40, 27: 50, 28: 12,
+        29: 25, 30: 25,
+        31: 20, 32: 35, 33: 35,
     }
     for col, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
@@ -274,13 +265,13 @@ def write_xlsx(ideas: list[CampaignIdea], output_path: str = None) -> str:
     summary["A3"].font = Font(bold=True, size=12)
 
     row = 5
-    summary.cell(row=row, column=1, value="By Priority (scored)").font = summary_sub
+    summary.cell(row=row, column=1, value="By Score Range (scored)").font = summary_sub
     row += 1
-    priority_counts = Counter(i.priority for i in scored)
-    for p in range(5, 0, -1):
-        count = priority_counts.get(p, 0)
-        if count > 0:
-            summary.cell(row=row, column=1, value=priority_labels.get(p, str(p)))
+    score_bands = [("Exceptional (≥3.5)", 3.5, 4.01), ("Strong (≥2.5)", 2.5, 3.5), ("Solid (≥1.5)", 1.5, 2.5), ("Low (<1.5)", 0, 1.5)]
+    for label, lo, hi in score_bands:
+        count = sum(1 for i in scored if lo <= i.weighted_score < hi)
+        if count:
+            summary.cell(row=row, column=1, value=label)
             summary.cell(row=row, column=2, value=count)
             row += 1
 
@@ -317,25 +308,22 @@ def print_summary(ideas: list[CampaignIdea]) -> None:
     print(f"  Scored: {len(scored)} | Watch list: {len(watch_list)}")
     print(f"{'='*60}")
 
-    print("\n  By Priority (scored):")
-    priority_counts = Counter(i.priority for i in scored)
-    for p in range(5, 0, -1):
-        count = priority_counts.get(p, 0)
-        if count > 0:
-            label = {5: "Exceptional", 4: "Strong", 3: "Solid", 2: "Low priority"}[p]
-            print(f"    Priority {p} ({label}): {count}")
+    print("\n  By Score Range (scored):")
+    score_bands = [("Exceptional (≥3.5)", 3.5, 4.01), ("Strong (≥2.5)", 2.5, 3.5), ("Solid (≥1.5)", 1.5, 2.5), ("Low (<1.5)", 0, 1.5)]
+    for label, lo, hi in score_bands:
+        count = sum(1 for i in scored if lo <= i.weighted_score < hi)
+        if count:
+            print(f"    {label}: {count}")
 
     top = sorted(scored, key=lambda i: i.weighted_score, reverse=True)[:10]
     print(f"\n  Top {len(top)} Campaign Ideas:")
     for rank, idea in enumerate(top, 1):
-        print(f"    {rank}. [P{idea.priority} | {idea.weighted_score:.2f}] {idea.headline[:75]}")
+        print(f"    {rank}. [{idea.weighted_score:.2f}] {idea.headline[:75]}")
         print(f"       Target: {idea.target[:60]}")
         print(f"       Ask: {idea.ask[:60]}")
-        print(f"       Scores: C={idea.score_beyond_choir} P={idea.score_pressure_point} A={idea.score_anti_authoritarian} R={idea.score_replication} W={idea.score_winnability}")
+        print(f"       Scores: C={idea.score_beyond_choir} P={idea.score_pressure_point} A={idea.score_anti_authoritarian} R={idea.score_replication} W={idea.score_winnability} E={idea.score_energy_potential} N={idea.score_non_compliance}")
         if idea.critique_notes:
             print(f"       Critique: {idea.critique_notes[:70]}")
-        if idea.campaign_group:
-            print(f"       Group: {idea.campaign_group}")
 
     if watch_list:
         print(f"\n  Watch List ({len(watch_list)}):")

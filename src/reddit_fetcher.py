@@ -22,114 +22,101 @@ from social_config import (
 REQUEST_DELAY_SECONDS = 6
 
 
-def fetch_reddit_posts(lookback_days: int = 30) -> list[Article]:
+def build_keyword_pattern():
+    return re.compile(
+        r'\b(' + '|'.join(re.escape(kw) for kw in REDDIT_KEYWORDS) + r')\b',
+        re.IGNORECASE
+    )
+
+
+def fetch_single_subreddit(
+    name: str,
+    lookback_days: int,
+    seen_ids: set,
+    keyword_pattern,
+    headers: dict,
+) -> list[Article]:
+    """Fetch top+new for one subreddit. Updates seen_ids in place. No engagement filter applied."""
+    cutoff_timestamp = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).timestamp()
+    requires_keywords = name.lower() in [s.lower() for s in SUBREDDITS_REQUIRE_KEYWORDS]
+    posts = []
+
+    try:
+        top_url = f"https://www.reddit.com/r/{name}/top.json?t=month&limit=100"
+        response = requests.get(top_url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        for child in response.json().get('data', {}).get('children', []):
+            post = child.get('data', {})
+            post_id = post.get('id')
+            if post_id in seen_ids or post.get('created_utc', 0) < cutoff_timestamp:
+                continue
+            if requires_keywords:
+                if not keyword_pattern.search(f"{post.get('title', '')} {post.get('selftext', '')}"):
+                    continue
+            seen_ids.add(post_id)
+            posts.append(_post_to_article(post))
+
+        time.sleep(2)
+
+        new_url = f"https://www.reddit.com/r/{name}/new.json?limit=50"
+        response = requests.get(new_url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        for child in response.json().get('data', {}).get('children', []):
+            post = child.get('data', {})
+            post_id = post.get('id')
+            if post_id in seen_ids or post.get('created_utc', 0) < cutoff_timestamp:
+                continue
+            if requires_keywords:
+                if not keyword_pattern.search(f"{post.get('title', '')} {post.get('selftext', '')}"):
+                    continue
+            seen_ids.add(post_id)
+            posts.append(_post_to_article(post))
+
+    except requests.exceptions.HTTPError as e:
+        code = e.response.status_code
+        print(f"    {'Rate limited' if code == 429 else 'Error'} on r/{name}: {e}")
+    except Exception as e:
+        print(f"    Error fetching r/{name}: {e}")
+
+    return posts
+
+
+def fetch_reddit_posts(
+    lookback_days: int = 30,
+    subreddits: list = None,
+    seen_ids: set = None,
+    keyword_pattern=None,
+) -> list[Article]:
     """
     Fetch posts from Reddit using the public JSON API.
     Uses top/month endpoint for 30-day lookback (instead of hot/new).
     Returns list of Article objects for unified processing.
     """
-    headers = {
-        'User-Agent': REDDIT_USER_AGENT,
-    }
-
-    cutoff_time = datetime.now(timezone.utc) - timedelta(days=lookback_days)
-    cutoff_timestamp = cutoff_time.timestamp()
+    headers = {'User-Agent': REDDIT_USER_AGENT}
+    if seen_ids is None:
+        seen_ids = set()
+    if keyword_pattern is None:
+        keyword_pattern = build_keyword_pattern()
+    if subreddits is None:
+        subreddits = REDDIT_SUBREDDITS
 
     all_posts = []
-    seen_ids = set()
 
-    # Build keyword regex for filtering broad subs
-    keyword_pattern = re.compile(
-        r'\b(' + '|'.join(re.escape(kw) for kw in REDDIT_KEYWORDS) + r')\b',
-        re.IGNORECASE
-    )
+    print(f"Fetching Reddit posts (top posts from last month, {len(subreddits)} subreddits)...")
 
-    print(f"Fetching Reddit posts (top posts from last month, {len(REDDIT_SUBREDDITS)} subreddits)...")
-
-    for i, subreddit_name in enumerate(REDDIT_SUBREDDITS):
-        print(f"  [{i+1}/{len(REDDIT_SUBREDDITS)}] Fetching r/{subreddit_name}...")
-
+    for i, name in enumerate(subreddits):
+        print(f"  [{i+1}/{len(subreddits)}] Fetching r/{name}...")
         if i > 0:
             time.sleep(REQUEST_DELAY_SECONDS)
+        posts = fetch_single_subreddit(name, lookback_days, seen_ids, keyword_pattern, headers)
+        all_posts.extend(posts)
+        print(f"    Found {len(posts)} posts")
 
-        requires_keywords = subreddit_name.lower() in [s.lower() for s in SUBREDDITS_REQUIRE_KEYWORDS]
-        posts_found = 0
-
-        try:
-            # Use top/month for 30-day lookback instead of hot
-            top_url = f"https://www.reddit.com/r/{subreddit_name}/top.json?t=month&limit=100"
-            response = requests.get(top_url, headers=headers, timeout=30)
-            response.raise_for_status()
-            top_data = response.json()
-
-            for child in top_data.get('data', {}).get('children', []):
-                post = child.get('data', {})
-                post_id = post.get('id')
-
-                if post_id in seen_ids:
-                    continue
-
-                created_utc = post.get('created_utc', 0)
-                if created_utc < cutoff_timestamp:
-                    continue
-
-                if requires_keywords:
-                    combined_text = f"{post.get('title', '')} {post.get('selftext', '')}"
-                    if not keyword_pattern.search(combined_text):
-                        continue
-
-                seen_ids.add(post_id)
-                article = _post_to_article(post)
-                all_posts.append(article)
-                posts_found += 1
-
-            # Also fetch new posts for recent items that haven't gotten engagement yet
-            time.sleep(2)
-
-            new_url = f"https://www.reddit.com/r/{subreddit_name}/new.json?limit=50"
-            response = requests.get(new_url, headers=headers, timeout=30)
-            response.raise_for_status()
-            new_data = response.json()
-
-            for child in new_data.get('data', {}).get('children', []):
-                post = child.get('data', {})
-                post_id = post.get('id')
-
-                if post_id in seen_ids:
-                    continue
-
-                created_utc = post.get('created_utc', 0)
-                if created_utc < cutoff_timestamp:
-                    continue
-
-                if requires_keywords:
-                    combined_text = f"{post.get('title', '')} {post.get('selftext', '')}"
-                    if not keyword_pattern.search(combined_text):
-                        continue
-
-                seen_ids.add(post_id)
-                article = _post_to_article(post)
-                all_posts.append(article)
-                posts_found += 1
-
-            print(f"    Found {posts_found} posts")
-
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print(f"    Rate limited on r/{subreddit_name}, skipping...")
-            else:
-                print(f"    Error fetching r/{subreddit_name}: {e}")
-        except Exception as e:
-            print(f"    Error fetching r/{subreddit_name}: {e}")
-
-    # Filter by minimum engagement
     filtered = [p for p in all_posts if _get_score(p) >= MIN_ENGAGEMENT_REDDIT]
-
     print(f"  Reddit total: {len(all_posts)} posts, {len(filtered)} after engagement filter")
-
-    # Sort by score
     filtered.sort(key=lambda p: _get_score(p), reverse=True)
-
     return filtered
 
 

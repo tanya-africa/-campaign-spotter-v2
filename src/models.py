@@ -20,6 +20,7 @@ class Article:
     content: str
     raw_html: Optional[str] = None
     source_type: str = "rss"  # rss, gmail, reddit, bluesky, gnews
+    source_query: str = ""   # full query string for gnews articles; empty for other sources
 
     def __hash__(self):
         return hash(self.url)
@@ -59,11 +60,13 @@ class CampaignIdea:
     gate_fail_reason: str = ""
     watch_list_trigger: str = ""     # What event could promote this to scored
     # Stage 2: Scoring dimensions (0-4 each)
-    score_beyond_choir: int = 0      # D1: 25%
+    score_beyond_choir: int = 0      # D1: 10%
     score_pressure_point: int = 0    # D2: 25%
     score_anti_authoritarian: int = 0  # D3: 25%
-    score_replication: int = 0       # D4: 12.5%
-    score_winnability: int = 0       # D5: 12.5%
+    score_replication: int = 0       # D4: 15%
+    score_winnability: int = 0       # D5: 10%
+    score_energy_potential: int = 0  # D6: 10%
+    score_non_compliance: int = 0    # D7: 5%
     weighted_score: float = 0.0
     score_rationale: str = ""
     # Self-critique annotations (filled by second pass)
@@ -72,9 +75,9 @@ class CampaignIdea:
     # Fit-for-us tags (filled by critique + coverage research)
     ai_leverage: str = ""            # Where AI-augmentation changes the odds, or ""
     existing_coverage: str = ""      # Who else is on this + what gap we'd fill, or ""
+    coverage_score: Optional[int] = None  # 0=saturated, 1=crowded, 2=gap, 3=wide open
+    source_query: str = ""               # full gnews query that sourced this idea; empty for other sources
     # Grouping
-    priority: int = 0                # Mapped from weighted_score
-    campaign_group: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)

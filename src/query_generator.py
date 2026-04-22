@@ -92,6 +92,13 @@ ROTATING_CATEGORIES = [
 
 QUERY_GENERATION_PROMPT = """You are helping a campaign scanner find today's news stories that could become grassroots campaign opportunities.
 
+The following queries already run as a fixed static set every day. Do NOT generate queries that are near-duplicates of these — you would just be wasting a Google News request on something already covered. Instead, prefer queries that either:
+  (a) target a SPECIFIC current event you know is happening right now (named people, specific pending decisions, recent developments from the last 1-2 weeks), OR
+  (b) explore angles, constituencies, or decision-maker types that the static set does not cover.
+
+Static queries already running:
+{static_queries_list}
+
 For each search category below, generate 2-3 Google News search queries that would surface relevant stories from the last 48 hours. The queries should:
 
 1. Be specific enough to find actionable stories (not just commentary)
@@ -152,8 +159,12 @@ def generate_queries(categories: list[dict] = None) -> dict[str, list[str]]:
     for cat in categories:
         categories_text += f"\n**{cat['name']}**: {cat['description']}\n"
 
+    from config import GOOGLE_NEWS_QUERIES
+    static_queries_list = "\n".join(f"- {q}" for q in GOOGLE_NEWS_QUERIES)
+
     now = datetime.now()
     prompt = QUERY_GENERATION_PROMPT.replace("{categories_text}", categories_text)
+    prompt = prompt.replace("{static_queries_list}", static_queries_list)
     # Inject current date context
     prompt = f"Today is {now.strftime('%B %d, %Y')}.\n\n" + prompt
 
